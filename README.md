@@ -2,6 +2,6 @@
 
 # XScreenSaver Game of Life hack
 
-![](https://mikaelfs.net/xscreensaver_zoom.gif)
+![](img/xscreensaver_wide.gif)
 
-![](https://mikaelfs.net/xscreensaver_zoom.gif)
+![](img/xscreensaver_zoom.gif)
