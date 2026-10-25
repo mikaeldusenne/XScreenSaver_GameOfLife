@@ -20,6 +20,7 @@ re and its
 
 #define NBITS 12
 #define NSTEP_MAX 50
+#define RECT_BATCH_SIZE 256
 int NSTEP = NSTEP_MAX;
 
 int SZ = 2;
@@ -56,7 +57,9 @@ struct state {
 
 	Colormap cmap;
 
-	stack px;
+	XRectangle rectangles[NSTEP_MAX][RECT_BATCH_SIZE];
+	int rectangle_count[NSTEP_MAX];
+	int redraw;
 	
 	XColor xcol;
 
@@ -224,6 +227,7 @@ game_of_life_init (Display *dpy, Window window){
 
 	NSTEP = 2 + get_integer_resource (dpy, "trail", "Integer");
 	if(NSTEP>NSTEP_MAX) NSTEP = NSTEP_MAX;
+	if(NSTEP<2) NSTEP = 2;
 	/* fprintf(stderr,"-------->>>> %d\n\n",NSTEP);	 */
 	
 
@@ -330,8 +334,7 @@ game_of_life_init (Display *dpy, Window window){
 	}
 	
 		
-	/* st->px = calloc( nx*ny , sizeof(int) ); */
-	init_stack(&(st->px));
+	st->redraw = 1;
 	
 	
 	init_zobrist();
@@ -391,11 +394,58 @@ static void render_console(int *b){
 	printf("\n--------\n");
 }
 
+/* Bounded per-colour batches avoid one X request per cell. */
+static void flush_rectangles(struct state *st, int color)
+{
+  int count = st->rectangle_count[color];
+  if (!count) return;
+  XSetForeground(st->dpy, st->gc, st->colors[color]);
+  XFillRectangles(st->dpy, st->window, st->gc,
+                  st->rectangles[color], count);
+  st->rectangle_count[color] = 0;
+}
+
+/* Compare final states, after extinction handling has modified the next board.
+   Adjacent dirty cells of the same colour become one horizontal rectangle. */
+static void render_frame(struct state *st, const int *previous, const int *next)
+{
+  int row, column, color;
+  if (st->redraw) {
+    XSetForeground(st->dpy, st->gc, st->colors[0]);
+    XFillRectangle(st->dpy, st->window, st->gc, 0, 0, st->xlim, st->ylim);
+  }
+  for (row = 0; row < ny; row++) {
+    for (column = 0; column < nx;) {
+      int index = (row + 1) * (nx + 1) + column + 1;
+      int first = column, count;
+      XRectangle *rectangle;
+      color = next[index];
+      if (!st->redraw && previous[index] == color) { column++; continue; }
+      do {
+        column++;
+        index++;
+      } while (column < nx && next[index] == color &&
+               (st->redraw || previous[index] != next[index]));
+      /* The full redraw already painted zero cells, including the margins. */
+      if (st->redraw && color == 0) continue;
+      count = st->rectangle_count[color]++;
+      rectangle = &st->rectangles[color][count];
+      rectangle->x = first * w;
+      rectangle->y = row * h;
+      rectangle->width = (column - first) * w;
+      rectangle->height = h;
+      if (count + 1 == RECT_BATCH_SIZE) flush_rectangles(st, color);
+    }
+  }
+  for (color = 0; color < NSTEP; color++) flush_rectangles(st, color);
+  st->redraw = 0;
+}
+
 static unsigned long
 game_of_life_draw (Display *dpy, Window window, void *closure){
  /* clock_t t = clock(); */
   struct state *st = (struct state *) closure;
-  int x, y, i, k;
+  int i, k;
 /*   XGCValues gcv; */
   
   int *b1 = boards[which_board],
@@ -426,10 +476,9 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
   /* 	  st->scrollcount = 0; */
   /* } */
   
-  st->px.index = 0;
+
 
   
-/*  int is[NSTEP] = {0}; */
   
   for( i = nx+1 ; i < SQ-nx-1 ; i++){
 	  if(b1[i]!=-1){
@@ -455,32 +504,25 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
 		  if(b1[i]==NSTEP-1){
 			  if(nb<2 || nb>3){
 				  b2[i] = b1[i]-1;
-				  /* st->px[b2[i]][ is[b2[i]]++ ] = i; */
 
-				  stack_push(i, &st->px);
-				  
 				  diff++;
 			  }
 			  else{
 				  b2[i] = b1[i];
-				  stack_push(i, &st->px);
-				  /* st->px[b2[i]][ is[b2[i]]++ ] = i; */
+
 			  }
 		  }else{
 			  if(nb==3){
 				  b2[i] = NSTEP-1;
 				  created++;
-				  stack_push(i, &st->px);
-				  /* st->px[b2[i]][ is[b2[i]]++ ] = i; */
+
 			  }
 			  else if(b1[i]){
 				  b2[i] = b1[i]-1;
-				  stack_push(i, &st->px);
-				  /* st->px[b2[i]][ is[b2[i]]++ ] = i; */
+
 			  }else{
 				  b2[i] = 0;
-				  stack_push(i, &st->px);
-				  /* st->px[b2[i]][ is[b2[i]]++ ] = i; */
+
 			  }
 		  }
 
@@ -555,6 +597,7 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
 	  reinit_board(SZ);
 	  printf("\n%d\n",SZ);
   	  st->ultimatum=-1;
+      st->redraw = 1;
   }
 
   if( !(nb_gen & 63) ){
@@ -569,33 +612,7 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
   which_board = 1-which_board;
   /* b1=b2; */
 
-  for( k=0; k<NSTEP; k++){
-	  XSetForeground(st->dpy, st->gc,
-			 st->colors[ k ]
-		  );
-
-	  
-	  
-	  for( i = 0; i < st->px.index; i++){
-		  if( b2[ st->px.data[i] ] == k ){
-
-			  x = ((st->px.data[i]%(nx+1))-1)*w;
-			  y = (st->px.data[i]/(nx+1)-1)*h;
-			  
-			  XFillRectangle (
-				  st->dpy,
-				  st->window,
-				  st->gc,
-				  x, y, w, h
-				  );
-		  
-		  }
-		  
-		  /* } */
-
-	  }
-
-  }
+  render_frame(st, b1, b2);
 
   /* XColor fgc,bgc; */
 
@@ -649,12 +666,17 @@ game_of_life_reshape (Display *dpy, Window window, void *closure,
   struct state *st = (struct state *) closure;
   st->xlim = w;
   st->ylim = h;
+  st->redraw = 1;
   /* reinit_board(); */
 }
 
 static Bool
 game_of_life_event (Display *dpy, Window window, void *closure, XEvent *event)
 {
+  if (event->type == Expose) {
+    ((struct state *)closure)->redraw = 1;
+    return True;
+  }
   return False;
 }
 
@@ -664,7 +686,8 @@ game_of_life_free (Display *dpy, Window window, void *closure)
 	free(boards[0]);
 	free(boards[1]);
 	free(zobrist_table);
-	destroy_stack(&((struct state *)closure)->px);
+	destroy_stack(&((struct state *)closure)->ok_sizes);
+	free(closure);
 }
 
 XSCREENSAVER_MODULE ("GameOfLife", game_of_life)
