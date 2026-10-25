@@ -14,6 +14,7 @@ re and its
 
 #include "screenhack.h"
 #include <time.h>
+#include <limits.h>
 #include "assert.h"
 #include "stdint.h"
 
@@ -49,6 +50,7 @@ struct state {
 	GC gc;
 	
 	int delay;
+	int cpu_percent;
 	unsigned long colors[NSTEP_MAX];
 	double step_col[3];
 	
@@ -99,7 +101,7 @@ static void reinit_board(int size);
 
 
 static void init_zobrist(void);
-static hash_t hash_board(int *b);
+
 
 static void init_stack(stack *s);
 static void destroy_stack(stack *s);
@@ -313,6 +315,9 @@ game_of_life_init (Display *dpy, Window window){
 	}
 	st->delay = get_integer_resource (st->dpy, "delay", "Integer");
 	if (st->delay < 0) st->delay = 0;
+    st->cpu_percent = get_integer_resource(dpy, "cpuPercent", "Integer");
+    if (st->cpu_percent < 1) st->cpu_percent = 1;
+    if (st->cpu_percent > 100) st->cpu_percent = 100;
 
 	st->gc = XCreateGC (st->dpy, st->window, GCForeground, &gcv);
 
@@ -364,22 +369,6 @@ static void init_zobrist(){
 			zobrist_table[i] = (zobrist_table[i]<<16) | (random() & mask);
 		}
 	}
-}
-
-static hash_t hash_board(int *b){
-	/* clock_t t = clock(); */
-	int i;
-	hash_t h=0;
-
-	for( i = nx+1 ; i < (SQ-nx-1) ; i++){
-		if(b[i]==NSTEP-1) h ^= zobrist_table[i];
-	}
-
-	/* fprintf(stderr,"\n%f ~~~~~~~~\n",((float)(clock()-t))/CLOCKS_PER_SEC); */
-
-	
-	
-	return h;
 }
 
 static void render_console(int *b){
@@ -441,110 +430,76 @@ static void render_frame(struct state *st, const int *previous, const int *next)
   st->redraw = 0;
 }
 
+/* Sliding three-column sums reuse six of the eight neighbour observations.
+   Lookup transitions preserve both Conway births and fading trail states. */
+struct evolution { int occupied, changed; hash_t hash; };
+
+static struct evolution evolve_board(const int *previous, int *next,
+                                     int collect_hash)
+{
+  struct evolution result = {0, 0, 0};
+  int transition[NSTEP_MAX][9];
+  int live = NSTEP - 1, stride = nx + 1;
+  int color, neighbors, row, column;
+  for (color = 0; color < NSTEP; color++)
+    for (neighbors = 0; neighbors <= 8; neighbors++)
+      transition[color][neighbors] =
+        (neighbors == 3 || (color == live && neighbors == 2))
+        ? live : (color ? color - 1 : 0);
+
+  for (row = 0; row < ny; row++) {
+    int offset = (row + 1) * stride;
+    const int *above = previous + offset - stride;
+    const int *current = previous + offset;
+    const int *below = previous + offset + stride;
+    int left = 0;
+    int center = (above[1] == live) + (current[1] == live) + (below[1] == live);
+    for (column = 1; column <= nx; column++) {
+      int right = (above[column + 1] == live) +
+                  (current[column + 1] == live) + (below[column + 1] == live);
+      int old = current[column];
+      int count = left + center + right - (old == live);
+      int value = transition[old][count];
+      next[offset + column] = value;
+      result.occupied += value > 0;
+      result.changed |= value != old;
+      if (collect_hash && value == live)
+        result.hash ^= zobrist_table[offset + column];
+      left = center;
+      center = right;
+    }
+  }
+  return result;
+}
+
+/* Return a timer delay, never busy-wait. Budget callback CPU time rather than
+   wall time, so waiting for X11 is not counted as CPU consumption. */
+static unsigned long frame_delay(struct state *st, clock_t started, clock_t ended)
+{
+  double idle_us;
+  if (st->cpu_percent == 100 || started == (clock_t)-1 ||
+      ended == (clock_t)-1 || ended < started)
+    return st->delay;
+  idle_us = ((double)(ended - started) / CLOCKS_PER_SEC) * 1000000.0 *
+            (100 - st->cpu_percent) / st->cpu_percent;
+  if (idle_us <= st->delay) return st->delay;
+  if (idle_us >= (double)ULONG_MAX) return ULONG_MAX;
+  return (unsigned long)idle_us;
+}
+
 static unsigned long
-game_of_life_draw (Display *dpy, Window window, void *closure){
- /* clock_t t = clock(); */
+game_of_life_draw (Display *dpy, Window window, void *closure)
+{
+  clock_t started = clock();
   struct state *st = (struct state *) closure;
   int i, k;
-/*   XGCValues gcv; */
-  
-  int *b1 = boards[which_board],
-	  *b2 = boards[1-which_board];
-  
-  int nb,diff=0,up=0,created=0;
-  
- /* # ifndef DO_STIPPLE */
-/*   XChangeGC (st->dpy, st->gc, GCForeground, &gcv); */
-/* # else  /\* DO_STIPPLE *\/ */
-/*   XChangeGC (st->dpy, st->gc, GCStipple|GCForeground|GCBackground, &gcv); */
-/* # endif /\* DO_STIPPLE *\/ */
+  int *b1 = boards[which_board], *b2 = boards[1-which_board];
+  struct evolution evolution = evolve_board(b1, b2, st->hash_activated);
+  int up = evolution.occupied;
+  int changed = evolution.changed;
 
-  /* printf("\n%d\n",which_board); */
-  /* assert(which_board==0 || which_board==1); */
-
-  /* st->scrollcount += st->scrollspeed; */
-  
-  /* if(st->scrollcount>=1){ */
-  /* 	  y = st->scrollcount; */
-  /* 	  for( i=1 ; i<ny+1 ; i++ ){ */
-  /* 		  k = i * (nx+1); */
-  /* 		  memcpy( &b1[k+1] , &b1[k+2] , sizeof(int) * (nx-1) ); */
-  /* 		  for( x = g */
-  /* 		  b1[ k + nx ] = random() & 1 ? NSTEP : 0 ; */
-  /* 		  /\* printf("%d -> %d\n", k, b1[k+nx - 1]); *\/ */
-  /* 	  } */
-  /* 	  st->scrollcount = 0; */
-  /* } */
-  
-
-
-  
-  
-  for( i = nx+1 ; i < SQ-nx-1 ; i++){
-	  if(b1[i]!=-1){
-		  nb=0;
-		  if(b1[i-(nx+1)]   == NSTEP-1 ) nb++;
-		  
-		  if(b1[i+(nx+1)]   == NSTEP-1 ) nb++;
-		  
-		  if(b1[i-1]        == NSTEP-1 ) nb++;
-
-		  if(b1[i+1]        == NSTEP-1 ) nb++;
-
-		  if(b1[i-(nx+1)-1] == NSTEP-1 ) nb++;
-
-		  if(b1[i+(nx+1)-1] == NSTEP-1 ) nb++;
-
-		  if(b1[i-(nx+1)+1] == NSTEP-1 ) nb++;
-
-		  if(b1[i+(nx+1)+1] == NSTEP-1 ) nb++;
-
-
-		  
-		  if(b1[i]==NSTEP-1){
-			  if(nb<2 || nb>3){
-				  b2[i] = b1[i]-1;
-
-				  diff++;
-			  }
-			  else{
-				  b2[i] = b1[i];
-
-			  }
-		  }else{
-			  if(nb==3){
-				  b2[i] = NSTEP-1;
-				  created++;
-
-			  }
-			  else if(b1[i]){
-				  b2[i] = b1[i]-1;
-
-			  }else{
-				  b2[i] = 0;
-
-			  }
-		  }
-
-		  
-		  if(b2[i]>0) up++;
-
-	  }
-  }
-
-  /* fprintf(stderr,"%d up\n",up); */
-  
-  /* printf("%d",(nx*nx)/(diff ? diff : 1)); */
-
-  /* if( st->ultimatum==-1 && diff && (nx*nx)/diff > 100 && !st->hash_activated){ */
-  /* 	  st->hash_activated=5; */
-  /* 	  st->prev_hash[0] = hash_board(b1); */
-  /* } */
-
-
-  
   if(st->hash_activated){
-  	  hash_t h = hash_board(b2);
+  	  hash_t h = evolution.hash;
   	  int same = 0;
 	  
   	  /* for(i=0;i<64;i++){ */
@@ -573,6 +528,7 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
   
 
   if(!st->ultimatum){
+      changed = 1; /* Cycle breaking can change an otherwise stable board. */
   	  for( i = nx+1 ; i < SQ-nx-1 ; i++){
   		  if(b2[i]==NSTEP-1) b2[i]--;
   	  }
@@ -612,7 +568,7 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
   which_board = 1-which_board;
   /* b1=b2; */
 
-  render_frame(st, b1, b2);
+  if (st->redraw || changed) render_frame(st, b1, b2);
 
   /* XColor fgc,bgc; */
 
@@ -637,11 +593,12 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
 
   nb_gen++;
   
-  return st->delay;
+  return frame_delay(st, started, clock());
 }
 
 
 static const char *game_of_life_defaults [] = {
+  "*cpuPercent: 5",
   "*fpsSolid:	true",
   "*delay:	100000",
   "*size:	1",
@@ -653,6 +610,7 @@ static const char *game_of_life_defaults [] = {
 };
 
 static XrmOptionDescRec game_of_life_options [] = {
+  { "-cpu-percent", ".cpuPercent", XrmoptionSepArg, "5" },
   { "-delay",		".delay",	XrmoptionSepArg, 0 },
   { "-size",		".size",	XrmoptionSepArg, "2" },
   { "-trail",		".trail",	XrmoptionSepArg, "50" },

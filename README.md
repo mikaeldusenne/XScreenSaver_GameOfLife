@@ -10,3 +10,9 @@ the reproducible benchmark and the remaining real-display validation.
 
 ![](img/xscreensaver_zoom.gif)
 
+
+Low consumption is the default: `-cpu-percent 5` adjusts the pause to the measured
+CPU cost of each frame. For a more economical setting, use
+`-cpu-percent 2 -delay 200000 -size 4`. This is a soft callback budget; see
+[PERFORMANCE.md](PERFORMANCE.md) for its scope and the real-display checks still
+required.

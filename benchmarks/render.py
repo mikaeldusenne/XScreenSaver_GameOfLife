@@ -15,7 +15,7 @@ parser.add_argument('--cc', default='cc')
 parser.add_argument('--sanitize', action='store_true')
 args = parser.parse_args()
 s=args.source.read_text()
-helper=s[s.index('static void flush_rectangles'):s.index('static unsigned long\ngame_of_life_draw')]
+helper=s[s.index('static void flush_rectangles'):s.index('/* Sliding three-column sums')]
 preamble=r'''
 #define _POSIX_C_SOURCE 200809L
 const char *__asan_default_options(void){return "detect_leaks=0";}
