@@ -18,13 +18,12 @@ Install your platform's [build dependencies](docs/INSTALL.md#1-install-build-dep
 ```sh
 git clone https://github.com/mikaeldusenne/XScreenSaver_GameOfLife.git
 cd XScreenSaver_GameOfLife
-git switch feat/cheap-beautiful
 ./install.sh
 ~/.local/bin/game-of-life
 ```
 
-The new version currently lives on **`feat/cheap-beautiful`**. The installer
-adds a menu launcher, an icon, a manual and Bash completion under `~/.local`.
+The installer adds a menu launcher, an icon, a manual and Bash completion
+under `~/.local`.
 No root access, background service or startup changes are made by the installer.
 Once `~/.local/bin` is in your PATH, just type `game-of-life`.
 

@@ -117,13 +117,9 @@ integration or Windows-wide idle detection.
 ```sh
 git clone https://github.com/mikaeldusenne/XScreenSaver_GameOfLife.git
 cd XScreenSaver_GameOfLife
-git switch feat/cheap-beautiful
 ./install.sh
 ~/.local/bin/game-of-life
 ```
-
-The feature currently lives on `feat/cheap-beautiful`; the explicit switch is
-needed until it is merged into the default branch.
 
 The installer builds into `build-install` and installs into `~/.local`:
 
