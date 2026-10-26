@@ -1,0 +1,5 @@
+/game_of_life
+/tests/life_test
+/tests/figures_test
+/tests/scene_test
+__pycache__/

@@ -1,0 +1,23 @@
+[
+  {
+    "backend": "desktop",
+    "width": 1920,
+    "height": 1080,
+    "size": 5,
+    "actual_size": 5,
+    "columns": 384,
+    "rows": 216,
+    "cells": 82944,
+    "target_fps": 15,
+    "seed": 42,
+    "warmup_s": 3,
+    "elapsed_s": 20.00022355200008,
+    "client_cpu": 4.299951936857213,
+    "graphics_cpu": 2.449972615186061,
+    "graphics_baseline_cpu": 0.9996541421587858,
+    "total_cpu": 6.749924552043274,
+    "rss_kib": 3348,
+    "fps": null,
+    "p95_frame_ms": null
+  }
+]

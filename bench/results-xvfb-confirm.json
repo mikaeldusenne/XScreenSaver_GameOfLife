@@ -1,0 +1,23 @@
+[
+  {
+    "backend": "Xvfb",
+    "width": 3840,
+    "height": 2160,
+    "size": 0,
+    "actual_size": 12,
+    "columns": 320,
+    "rows": 180,
+    "cells": 57600,
+    "target_fps": 15,
+    "seed": 2026,
+    "warmup_s": 3,
+    "elapsed_s": 20.0004051169999,
+    "client_cpu": 2.6999453103127995,
+    "graphics_cpu": 5.549887582309644,
+    "graphics_baseline_cpu": 0.0,
+    "total_cpu": 8.249832892622443,
+    "rss_kib": 3332,
+    "fps": 13.749721487704072,
+    "p95_frame_ms": 74.9547249997704
+  }
+]
