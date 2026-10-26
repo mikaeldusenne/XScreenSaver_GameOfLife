@@ -1,0 +1,10 @@
+/game_of_life
+/tests/life_test
+/tests/figures_test
+/tests/scene_test
+__pycache__/
+/build*/
+/_CPack_Packages/
+/game-of-life-*.tar.gz
+/game-of-life-*.deb
+/game-of-life-*.rpm

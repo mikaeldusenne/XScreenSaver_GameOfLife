@@ -1,0 +1,90 @@
+name: Build and package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libx11-dev libxss-dev xvfb xauth xfonts-base desktop-file-utils
+      - name: macOS build dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake pkgconf libx11 libxscrnsaver
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix)" >> "$GITHUB_ENV"
+      - name: Configure and compile
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build --parallel 2
+      - name: Existing simulation checks and CLI
+        run: |
+          ctest --test-dir build --output-on-failure
+          build/game_of_life --version
+          build/game_of_life --find pulsar
+      - name: Preview smoke check on Linux
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a sh -eu -c '
+            build/game_of_life --doctor
+            build/game_of_life --figure pulsar &
+            app=$!
+            trap "kill $app 2>/dev/null || true" EXIT
+            sleep 2
+            kill -TERM "$app"
+            wait "$app"
+          '
+      - name: Build without the optional idle library
+        run: |
+          cmake -S . -B build-minimal -DLIFE_WITH_XSS=OFF
+          cmake --build build-minimal --parallel 2
+          build-minimal/game_of_life --version
+      - name: Stage the complete installation
+        run: |
+          DESTDIR="$PWD/stage" cmake --install build
+          stage/usr/bin/game-of-life version
+          stage/usr/bin/game-of-life figures gun
+      - name: Validate desktop entry and make DEB
+        if: runner.os == 'Linux'
+        run: |
+          desktop-file-validate stage/usr/share/applications/game-of-life.desktop
+          cd build
+          cpack -G DEB
+      - name: Create native archive
+        run: cd build && cpack -G TGZ
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-of-life-${{ matrix.os }}
+          path: |
+            build/game-of-life-*.tar.gz
+            build/game-of-life-*.deb
+          if-no-files-found: error
+  alpine:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and check with musl
+        run: |
+          docker run --rm -v "$PWD:/source:ro" alpine:3.22 sh -eu -c '
+            apk add --no-cache build-base cmake libx11-dev libxscrnsaver-dev
+            cmake -S /source -B /tmp/build -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=/tmp/install
+            cmake --build /tmp/build --parallel 2
+            ctest --test-dir /tmp/build --output-on-failure
+            cmake --install /tmp/build
+            /tmp/install/bin/game-of-life version
+            cmake --build /tmp/build --target uninstall
+          '
