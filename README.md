@@ -9,9 +9,9 @@ avant la suivante.
 
 ## Lancer
 
-Il faut un compilateur C, `make`, `pkg-config` et les en-têtes Xlib.
-Sur Arch : `sudo pacman -S --needed base-devel libx11`.
-Sur Debian/Ubuntu : `sudo apt install build-essential pkg-config libx11-dev`.
+Il faut un compilateur C, `make`, `pkg-config` et les en-têtes Xlib et Xss.
+Sur Arch : `sudo pacman -S --needed base-devel libx11 libxss`.
+Sur Debian/Ubuntu : `sudo apt install build-essential pkg-config libx11-dev libxss-dev`.
 
 ```sh
 make
@@ -19,9 +19,10 @@ make
 ```
 
 **Espace** renouvelle le monde ; **Échap** ou **Q** ferme l’aperçu.
+**Clic gauche** passe à la scène suivante, **clic droit** rejoue la précédente.
 
 ```sh
-./game_of_life -fullscreen          # Une touche ou un clic pour sortir
+./game_of_life -fullscreen          # Une touche pour sortir ; clics pour naviguer
 ./game_of_life -fps 10 -size 10      # Plus lent, plus gros, moins de calcul
 ./game_of_life -size 3 -trail 24     # Un tissu plus fin, des traces plus longues
 ./game_of_life -seed 42             # Reproduire un monde à dimensions identiques
@@ -37,6 +38,7 @@ make
 ./game_of_life --random-figures                    # Mélange aéré de motifs connus
 ./game_of_life --alternate -seconds 30             # Alterner les trois scènes
 ./game_of_life --wallpaper                        # Fond animé, alternance adaptative
+./game_of_life --wallpaper --idle 120              # Aussi en screensaver après 2 minutes
 ./game_of_life --list-figures                      # Les 810 noms disponibles
 ```
 
@@ -65,6 +67,12 @@ Les anciennes options à un tiret acceptent aussi deux tirets : `--fps`, `--size
 
 Une petite légende en bas à droite indique la scène et, le cas échéant, le nom
 de la figure. Sa bande réservée reste lisible sans recouvrir la simulation.
+À gauche, si la largeur le permet, un rappel indique les clics de navigation.
+Les 64 dernières scènes sont mémorisées par leur graine aléatoire : revenir en
+arrière rejoue la même figure ou le même monde depuis son début, à dimensions
+identiques. Un clic gauche après un retour retrouve la scène suivante déjà vue.
+À la première scène conservée, le clic droit ne fait rien. Le mode `--figure NOM`
+continue de montrer uniquement la figure demandée.
 Une scène entièrement éteinte est renouvelée après deux secondes, afin de ne pas
 laisser un écran vide, même avec une durée fixe. Une cadence effective plus basse
 allonge ces durées ; une fenêtre entièrement masquée met l’animation et son
@@ -94,6 +102,24 @@ sous les applications, sans prendre le focus ni quitter sur une touche ou un
 clic. Elle suit la taille de l’écran et s’arrête de calculer lorsqu’une autre
 fenêtre la masque entièrement. Le fond précédent réapparaît à l’arrêt.
 
+Ajouter **`--idle 120`** pour faire passer cette même animation devant les
+applications après deux minutes sans activité clavier ou souris, y compris
+devant les fenêtres plein écran d’i3. Il n’y a qu’un processus et une simulation.
+Les clics gauche/droit changent de scène sans quitter le screensaver ; déplacer
+la souris le laisse affiché. **Une touche, par exemple Échap, ramène au bureau**
+et laisse le fond animé actif. Un nouveau délai complet précède la réactivation.
+Les clics sur le fond visible fonctionnent aussi hors du screensaver.
+
+Le compteur d’inactivité X11 est interrogé au plus une fois par seconde ; le
+déclenchement a donc une précision d’environ une seconde. Les touches et clics
+du screensaver sont consommés, sans les transmettre à l’application dessous.
+Le focus est conservé, et une capture d’entrée déjà détenue par un autre programme
+(par exemple un verrouilleur) empêche son activation. Les délais de mise en veille
+de l’écran restent ceux de la session. Ce mode n’est pas un verrouillage : il
+ne demande aucun mot de passe. Pour utiliser la gestion d’inactivité et de
+verrouillage de XScreenSaver, suivre plutôt la section suivante.
+L’extension utilisée est documentée dans le [manuel Xss de X.Org](https://xorg.freedesktop.org/releases/X11R6.9.0/doc/html/XScreenSaverQueryInfo.3.html).
+
 Pour une installation utilisateur persistante avec systemd :
 
 ```sh
@@ -115,6 +141,9 @@ Pour arrêter : `systemctl --user stop game-of-life-wallpaper.service`.
 Pour retirer le démarrage automatique, supprimer cette ligne i3 et exécuter
 `systemctl --user disable --now game-of-life-wallpaper.service`. Le fichier
 d’unité fourni suppose l’installation par défaut dans `~/.local/bin`.
+Il active aussi le screensaver après deux minutes ; retirer `--idle 120` de
+`ExecStart` pour garder uniquement le fond animé, puis exécuter
+`systemctl --user daemon-reload` et `systemctl --user restart game-of-life-wallpaper.service`.
 
 ## Utiliser dans XScreenSaver
 
@@ -138,6 +167,8 @@ dans cette interface pour créer le fichier. Conserver la liste existante.
 
 XScreenSaver fournit la fenêtre via `XSCREENSAVER_WINDOW` : le programme dessine
 dedans et lui laisse la gestion de l’inactivité, des entrées et du verrouillage.
+Les clics de navigation concernent les fenêtres autonomes et le fond animé ;
+dans XScreenSaver, les entrées restent gérées par XScreenSaver.
 `-window-id 0x…` permet aussi l’intégration dans une fenêtre existante.
 Sans fenêtre fournie, `-root` dessine sur la fenêtre racine X11.
 L’aperçu plein écran est un aperçu, pas un verrouillage de session.
@@ -193,6 +224,7 @@ des budgets de générations à la cadence demandée, hors pause et effacement.
 | `-trail` | 18 | 0–31 générations |
 | `-seconds` | `0` : adaptatif | 0 ou 10–3600 secondes d’animation |
 | `-seed` | variable | 0–4294967295 |
+| `--idle` | `0` : désactivé | 0–86400 secondes, avec `--wallpaper` |
 
 Une grille explicitement trop grande est refusée au-delà de 4 Mio par tampon.
 La cadence est un plafond ; elle baisse si le dessin prend du temps.
@@ -240,6 +272,11 @@ Les nouveaux modes ont également été vérifiés sous Xvfb avec ces outils :
 scène suivante avec Espace.
 Le fond animé est vérifié pour son ordre d’empilement, l’absence de prise de
 focus, la pause CPU lorsqu’il est masqué et la persistance des légendes.
+La navigation est vérifiée avec de vrais événements de souris, dont le retour
+exact sur les 64 scènes conservées. Les essais d’inactivité couvrent le retour
+au bureau, le nouveau délai, les captures d’entrée concurrentes et leur libération
+à l’arrêt. Une session i3 isolée vérifie aussi les 120 secondes réelles devant
+une application plein écran.
 
 `life.c` contient uniquement la simulation ; `figures_data.inc` les graines ;
 `figures.c` leur placement ; `scene.c` adapte le zoom et les durées ;

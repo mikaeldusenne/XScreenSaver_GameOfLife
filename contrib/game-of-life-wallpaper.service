@@ -1,10 +1,10 @@
 [Unit]
-Description=Game of Life animated X11 wallpaper
+Description=Game of Life wallpaper and screensaver after two idle minutes
 PartOf=graphical-session.target
 After=graphical-session-pre.target
 
 [Service]
-ExecStart=%h/.local/bin/game_of_life --wallpaper --alternate
+ExecStart=%h/.local/bin/game_of_life --wallpaper --alternate --idle 120
 Restart=on-failure
 RestartSec=5
 

@@ -19,6 +19,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <X11/extensions/scrnsaver.h>
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
@@ -29,13 +30,19 @@
 #include <time.h>
 #include <unistd.h>
 
-enum { BATCH = 256 };
+enum { BATCH = 256, HISTORY = 64 };
 enum mode { MODE_RANDOM, MODE_FIGURE, MODE_RANDOM_FIGURES, MODE_ALTERNATE };
+
+struct entry {
+    enum mode mode;
+    const struct figure *figure;
+    uint32_t random;
+};
 
 struct options {
     const char *display;
     Window window;
-    int size, fps, trail, seconds;
+    int size, fps, trail, seconds, idle;
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
@@ -60,7 +67,10 @@ struct app {
     struct scene timing;
     enum mode scene;
     const struct figure *figure;
-    bool own_window, visible, redraw;
+    struct entry history[HISTORY];
+    unsigned history_count, history_index;
+    double idle_check, idle_after;
+    bool own_window, visible, redraw, presenting;
 };
 
 static volatile sig_atomic_t stopping;
@@ -126,15 +136,18 @@ options(int argc, char **argv)
                  "  --mode MODE        random, random-figures or alternate\n"
                  "  --list-figures      List the built-in library and exit\n"
                  "  --wallpaper        Animate behind applications (default: alternate)\n"
+                 "  --idle N           With --wallpaper, show above apps after N idle seconds\n"
+                 "                     0 = disabled (default), 1..86400; any key returns\n"
                  "  -root              Draw in XScreenSaver's window (or root)\n"
                  "  -window-id ID      Draw in an existing X11 window\n"
-                 "  -fullscreen        Fullscreen preview; any key/click exits\n"
+                 "  -fullscreen        Fullscreen preview; any key exits\n"
                  "  -display DISPLAY   X server (default: $DISPLAY)\n"
                  "  -size N            Cell size in pixels, 0 = automatic (default)\n"
                  "  -fps N             Frames per second, 1..60 (default: 15)\n"
                  "  -trail N           Trail length, 0..31 (default: 18)\n"
                  "  -seconds N         Fixed duration, 10..3600; 0 = adaptive (default)\n"
                  "  -seed N            Reproducible initial world, 0..4294967295\n"
+                 "Left click: next scene; right click: previous scene (replayed).\n"
                  "Preview: Escape/Q closes; Space gently renews the world.");
             exit(EXIT_SUCCESS);
         }
@@ -171,6 +184,7 @@ options(int argc, char **argv)
             else if (!strcmp(arg, "-size")) opt.size = (int)number(value, 0, 128);
             else if (!strcmp(arg, "-fps")) opt.fps = (int)number(value, 1, 60);
             else if (!strcmp(arg, "-trail")) opt.trail = (int)number(value, 0, 31);
+            else if (!strcmp(arg, "-idle")) opt.idle = (int)number(value, 0, 86400);
             else if (!strcmp(arg, "-seconds")) {
                 opt.seconds = (int)number(value, 0, 3600);
                 if (opt.seconds && opt.seconds < 10) fail("seconds must be 0 or 10..3600");
@@ -196,6 +210,7 @@ options(int argc, char **argv)
         (opt.wallpaper && (opt.root || opt.window)))
         fail("choose one target: wallpaper, fullscreen preview, or an existing window");
     if (opt.wallpaper && !mode_chosen) opt.mode = MODE_ALTERNATE;
+    if (opt.idle && !opt.wallpaper) fail("--idle requires --wallpaper");
     return opt;
 }
 
@@ -241,16 +256,31 @@ palette(struct app *app)
 }
 
 static void
-seed(struct app *app, bool next_scene)
+remember_scene(struct app *app)
 {
-    if (app->options.mode == MODE_ALTERNATE) {
-        if (next_scene) app->scene = (app->scene + 1) % MODE_ALTERNATE;
-        if (app->scene == MODE_FIGURE && (next_scene || !app->figure))
-            app->figure = &figures[life_random(&app->life) % figure_count];
-    } else {
-        app->scene = app->options.mode;
-        app->figure = app->options.figure;
+    enum mode mode = app->options.mode;
+    const struct figure *figure = app->options.figure;
+    if (mode == MODE_ALTERNATE) {
+        mode = app->history_count ? (app->scene + 1) % MODE_ALTERNATE : MODE_RANDOM;
+        if (mode == MODE_FIGURE)
+            figure = &figures[life_random(&app->life) % figure_count];
     }
+    if (app->history_count == HISTORY) {
+        memmove(app->history, app->history + 1, (HISTORY - 1) * sizeof(*app->history));
+        --app->history_count;
+    }
+    app->history_index = app->history_count++;
+    app->history[app->history_index] = (struct entry){mode, figure, app->life.random};
+}
+
+static void
+seed(struct app *app)
+{
+    const struct entry *entry = &app->history[app->history_index];
+    app->scene = entry->mode;
+    app->figure = entry->figure;
+    /* Store seeds, not grids: previous/next replays the same initial world. */
+    app->life.random = entry->random;
     int width = app->width, height = app->height;
     int footer = app->font->ascent + app->font->descent + 16;
     if (height > footer + 16 && width >= 40) height -= footer;
@@ -292,6 +322,20 @@ seed(struct app *app, bool next_scene)
 }
 
 static void
+navigate(struct app *app, int direction)
+{
+    if (direction < 0) {
+        if (!app->history_index) return;
+        --app->history_index;
+    } else if (app->history_index + 1 < app->history_count) {
+        ++app->history_index;
+    } else {
+        remember_scene(app);
+    }
+    seed(app);
+}
+
+static void
 resize(struct app *app, int width, int height)
 {
     if (width == app->width && height == app->height) return;
@@ -299,7 +343,7 @@ resize(struct app *app, int width, int height)
         fail("unsupported window dimensions");
     app->width = width;
     app->height = height;
-    seed(app, false);
+    seed(app);
 }
 
 static void
@@ -354,6 +398,16 @@ draw(struct app *app)
         XDrawString(app->display, app->window, app->gc,
                     app->width - 8 - XTextWidth(app->font, label, length),
                     app->height - 8 - app->font->descent, label, length);
+        if (app->own_window) {
+            const char *hint = app->presenting
+                ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
+                : "Clic gauche = suivant ; clic droit = pr\351c\351dent";
+            int hint_length = (int)strlen(hint);
+            if (XTextWidth(app->font, hint, hint_length) +
+                XTextWidth(app->font, label, length) + 40 <= app->width)
+                XDrawString(app->display, app->window, app->gc, 8,
+                            app->height - 8 - app->font->descent, hint, hint_length);
+        }
     }
     app->redraw = false;
     XFlush(app->display);
@@ -364,7 +418,7 @@ advance(struct app *app)
 {
     if (app->fading) {
         life_step(&app->life, (unsigned)app->options.trail, true);
-        if (--app->fading == 0) seed(app, true);
+        if (--app->fading == 0) navigate(app, 1);
         return;
     }
     life_step(&app->life, (unsigned)app->options.trail, false);
@@ -380,6 +434,11 @@ open_window(struct app *app)
     Display *display = app->display;
     int screen = DefaultScreen(display);
     Window root = app->root = RootWindow(display, screen);
+    if (app->options.idle) {
+        int event, error;
+        if (!XScreenSaverQueryExtension(display, &event, &error))
+            fail("--idle needs the X11 screen saver extension");
+    }
     const char *provided = getenv("XSCREENSAVER_WINDOW");
     app->window = app->options.window;
     if (!app->options.wallpaper && !app->window && provided && *provided)
@@ -422,7 +481,10 @@ open_window(struct app *app)
         }
     }
     long mask = ExposureMask | StructureNotifyMask | VisibilityChangeMask;
-    if (app->own_window && !app->options.wallpaper) mask |= KeyPressMask | ButtonPressMask;
+    if (app->own_window) {
+        mask |= ButtonPressMask;
+        if (!app->options.wallpaper || app->options.idle) mask |= KeyPressMask;
+    }
     XSelectInput(display, app->window, mask);
     XWindowAttributes attributes;
     if (!XGetWindowAttributes(display, app->window, &attributes))
@@ -437,11 +499,49 @@ open_window(struct app *app)
     if (!app->font) fail("cannot load the X11 fixed font");
     XSetFont(display, app->gc, app->font->fid);
     app->life.random = app->options.seed;
+    remember_scene(app);
     resize(app, attributes.width, attributes.height);
     if (app->own_window) {
         if (app->options.wallpaper) XLowerWindow(display, app->window);
         XMapWindow(display, app->window);
     }
+}
+
+static void
+return_to_desktop(struct app *app)
+{
+    XUngrabKeyboard(app->display, CurrentTime);
+    XUngrabPointer(app->display, CurrentTime);
+    XLowerWindow(app->display, app->window);
+    app->presenting = false;
+    app->redraw = true;
+    app->idle_after = now() + app->options.idle;
+    XFlush(app->display);
+}
+
+static void
+check_idle(struct app *app, double time)
+{
+    if (!app->options.idle || app->presenting || time < app->idle_check) return;
+    app->idle_check = time + 1;
+    if (time < app->idle_after) return;
+    XScreenSaverInfo info = {0};
+    if (!XScreenSaverQueryInfo(app->display, app->root, &info))
+        fail("cannot query X11 idle time");
+    if (info.idle < (unsigned long)app->options.idle * 1000 || info.state == ScreenSaverOn)
+        return;
+    /* Never steal a grab from a locker or another application. Both grabs must
+     * succeed before raising the wallpaper; neither changes the input focus. */
+    if (XGrabKeyboard(app->display, app->window, False, GrabModeAsync,
+                      GrabModeAsync, CurrentTime) != GrabSuccess) return;
+    if (XGrabPointer(app->display, app->window, False, ButtonPressMask | ButtonReleaseMask,
+                     GrabModeAsync, GrabModeAsync, None, None, CurrentTime) != GrabSuccess) {
+        XUngrabKeyboard(app->display, CurrentTime);
+        XFlush(app->display);
+        return;
+    }
+    app->presenting = app->visible = app->redraw = true;
+    XRaiseWindow(app->display, app->window);
 }
 
 static void
@@ -464,14 +564,25 @@ events(struct app *app)
         case VisibilityNotify:
             app->visible = event.xvisibility.state != VisibilityFullyObscured;
             break;
-        case DestroyNotify: stopping = 1; window_destroyed = true; break;
+        case DestroyNotify:
+            if (event.xdestroywindow.window == app->window) {
+                stopping = 1;
+                window_destroyed = true;
+            }
+            break;
         case ClientMessage:
             if ((Atom)event.xclient.data.l[0] == app->wm_delete) stopping = 1;
             break;
         case ButtonPress:
-            if (app->options.fullscreen) stopping = 1;
+            if (event.xbutton.button == Button1) navigate(app, 1);
+            else if (event.xbutton.button == Button3) navigate(app, -1);
             break;
         case KeyPress: {
+            if (app->presenting) {
+                return_to_desktop(app);
+                break;
+            }
+            if (app->options.wallpaper) break;
             KeySym key = XLookupKeysym(&event.xkey, 0);
             if (app->options.fullscreen || key == XK_Escape || key == XK_q)
                 stopping = 1;
@@ -500,6 +611,7 @@ main(int argc, char **argv)
         events(&app);
         if (stopping) break;
         double time = now();
+        check_idle(&app, time);
         if (app.visible && (app.redraw || time >= next)) {
             if (time >= next && !app.redraw) advance(&app);
             draw(&app);

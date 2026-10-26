@@ -2,8 +2,8 @@ CC = cc
 PKG_CONFIG ?= pkg-config
 CFLAGS ?= -O2
 CFLAGS += -std=c99 -Wall -Wextra -Wpedantic
-X11_CFLAGS := $(shell $(PKG_CONFIG) --cflags x11)
-X11_LIBS := $(shell $(PKG_CONFIG) --libs x11)
+X11_CFLAGS := $(shell $(PKG_CONFIG) --cflags x11 xscrnsaver)
+X11_LIBS := $(shell $(PKG_CONFIG) --libs x11 xscrnsaver)
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
 

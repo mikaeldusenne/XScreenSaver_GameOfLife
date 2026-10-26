@@ -156,7 +156,7 @@ def main():
                             '-DXFlush=bench_flush', str(ROOT / 'game_of_life.c'),
                             str(ROOT / 'life.c'), str(ROOT / 'figures.c'), str(ROOT / 'scene.c'),
                             str(ROOT / 'bench/frames.c'),
-                            '-lX11', '-o', str(binary)], check=True)
+                            '-lX11', '-lXss', '-o', str(binary)], check=True)
         for index, case in enumerate(args.cases.split(',')):
             dimensions, size = case.split(':')
             width, height = map(int, dimensions.split('x'))
