@@ -1,0 +1,48 @@
+#!/bin/sh
+# Friendly entry point; the renderer retains its original executable name.
+set -eu
+case $0 in
+    */*) location=$0 ;;
+    *) location=$(command -v "$0") ;;
+esac
+bindir=$(CDPATH= cd -- "$(dirname -- "$location")" && pwd)
+renderer=$bindir/game_of_life
+if [ ! -x "$renderer" ]; then
+    printf '%s\n' "Cannot find $renderer. Reinstall Game of Life." >&2
+    exit 1
+fi
+command=${1:-preview}
+if [ "$#" -gt 0 ]; then shift; fi
+case $command in
+    preview) exec "$renderer" --alternate "$@" ;;
+    figure) exec "$renderer" --figure "$@" ;;
+    mix) exec "$renderer" --random-figures "$@" ;;
+    random) exec "$renderer" --random "$@" ;;
+    wallpaper) exec "$renderer" --wallpaper "$@" ;;
+    screensaver) exec "$renderer" --wallpaper --idle 120 "$@" ;;
+    figures)
+        if [ "$#" -eq 0 ]; then exec "$renderer" --list-figures; fi
+        if [ "$#" -ne 1 ]; then printf '%s\n' 'Usage: game-of-life figures [name-or-family]' >&2; exit 2; fi
+        exec "$renderer" --find "$1" ;;
+    doctor) exec "$renderer" --doctor "$@" ;;
+    version|--version) exec "$renderer" --version ;;
+    help|--help|-h)
+        cat <<'HELP'
+Game of Life — cheap & beautiful
+
+  game-of-life                         A living collection, ready to watch
+  game-of-life figure pulsar           One figure, room to grow
+  game-of-life mix                     A garden of classic patterns
+  game-of-life figures gun             Find a figure by name or family
+  game-of-life wallpaper               Animate behind X11 applications
+  game-of-life screensaver             Wallpaper + saver after two idle minutes
+  game-of-life doctor                  Check this display's capabilities
+
+Left click: next. Right click: previous. In the saver, any key returns to work.
+Renderer options can follow a command: --fps 10, --idle 300, --lang fr, ...
+All options: game_of_life --help. Manual: man game-of-life.
+HELP
+        ;;
+    -*) exec "$renderer" "$command" "$@" ;;
+    *) printf 'Unknown command: %s\nTry: game-of-life help\n' "$command" >&2; exit 2 ;;
+esac

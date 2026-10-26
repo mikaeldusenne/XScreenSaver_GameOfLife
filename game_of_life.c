@@ -19,7 +19,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#ifndef LIFE_HAVE_XSS
+#define LIFE_HAVE_XSS 1
+#endif
+#if LIFE_HAVE_XSS
 #include <X11/extensions/scrnsaver.h>
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
@@ -29,6 +34,10 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef LIFE_VERSION
+#define LIFE_VERSION "dev"
+#endif
 
 enum { BATCH = 256, HISTORY = 64 };
 enum mode { MODE_RANDOM, MODE_FIGURE, MODE_RANDOM_FIGURES, MODE_ALTERNATE };
@@ -46,7 +55,7 @@ struct options {
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
-    bool root, fullscreen, wallpaper;
+    bool root, fullscreen, wallpaper, doctor, english;
 };
 
 struct app {
@@ -118,23 +127,41 @@ number(const char *text, unsigned long low, unsigned long high)
     return value;
 }
 
+static bool
+french_locale(void)
+{
+    const char *locale = getenv("LC_ALL");
+    if (!locale || !*locale) locale = getenv("LC_MESSAGES");
+    if (!locale || !*locale) locale = getenv("LANG");
+    return locale && !strncmp(locale, "fr", 2);
+}
+
 static struct options
 options(int argc, char **argv)
 {
     struct options opt = {.fps = 15, .trail = 18,
+                          .english = !french_locale(),
                           .seed = (unsigned)time(NULL) ^ (unsigned)getpid()};
     bool mode_chosen = false;
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
         if (arg[0] == '-' && arg[1] == '-') ++arg;
-        if (!strcmp(arg, "-help")) {
-            puts("Usage: game_of_life [options]\n"
+        if (!strcmp(arg, "-help") || !strcmp(arg, "-h")) {
+            puts("Game of Life " LIFE_VERSION " — cheap & beautiful\n\n"
+                 "Try: game_of_life --alternate\n"
+                 "     game_of_life --figure pulsar\n"
+                 "     game_of_life --wallpaper --idle 120\n\n"
+                 "Usage: game_of_life [options]\n"
                  "  --random           Random cells (default)\n"
                  "  --figure NAME      One centered instance of a known figure\n"
                  "  --random-figures    Scatter separated, randomly oriented figures\n"
                  "  --alternate        Cycle random -> figure -> random figures\n"
                  "  --mode MODE        random, random-figures or alternate\n"
                  "  --list-figures      List the built-in library and exit\n"
+                 "  --find TEXT         Filter figures by name or family and exit\n"
+                 "  --doctor            Check this display and report supported features\n"
+                 "  --version           Print version and build features\n"
+                 "  --lang en|fr        Caption language (default: system locale)\n"
                  "  --wallpaper        Animate behind applications (default: alternate)\n"
                  "  --idle N           With --wallpaper, show above apps after N idle seconds\n"
                  "                     0 = disabled (default), 1..86400; any key returns\n"
@@ -151,6 +178,19 @@ options(int argc, char **argv)
                  "Preview: Escape/Q closes; Space gently renews the world.");
             exit(EXIT_SUCCESS);
         }
+        if (!strcmp(arg, "-version")) {
+            printf("Game of Life %s (X11; idle detection: %s; %zu figures)\n",
+                   LIFE_VERSION, LIFE_HAVE_XSS ? "yes" : "no", figure_count);
+            exit(EXIT_SUCCESS);
+        }
+        if (!strcmp(arg, "-find")) {
+            if (++i == argc) fail("--find needs a name or family, e.g. --find gun");
+            for (size_t j = 0; j < figure_count; ++j)
+                if (strstr(figures[j].name, argv[i]) || strstr(figures[j].kind, argv[i]))
+                    printf("%-32s %-12s %3d x %d\n", figures[j].name, figures[j].kind,
+                           figures[j].width, figures[j].height);
+            exit(EXIT_SUCCESS);
+        }
         if (!strcmp(arg, "-list-figures")) {
             for (size_t j = 0; j < figure_count; ++j)
                 printf("%-32s %-12s %3d x %d\n", figures[j].name, figures[j].kind,
@@ -163,7 +203,9 @@ options(int argc, char **argv)
             if (mode_chosen) fail("choose a single mode (see --help)");
             mode_chosen = true;
         }
-        if (!strcmp(arg, "-root")) {
+        if (!strcmp(arg, "-doctor")) {
+            opt.doctor = true;
+        } else if (!strcmp(arg, "-root")) {
             opt.root = true;
         } else if (!strcmp(arg, "-fullscreen")) {
             opt.fullscreen = true;
@@ -185,6 +227,10 @@ options(int argc, char **argv)
             else if (!strcmp(arg, "-fps")) opt.fps = (int)number(value, 1, 60);
             else if (!strcmp(arg, "-trail")) opt.trail = (int)number(value, 0, 31);
             else if (!strcmp(arg, "-idle")) opt.idle = (int)number(value, 0, 86400);
+            else if (!strcmp(arg, "-lang")) {
+                if (strcmp(value, "en") && strcmp(value, "fr")) fail("--lang must be en or fr");
+                opt.english = !strcmp(value, "en");
+            }
             else if (!strcmp(arg, "-seconds")) {
                 opt.seconds = (int)number(value, 0, 3600);
                 if (opt.seconds && opt.seconds < 10) fail("seconds must be 0 or 10..3600");
@@ -211,7 +257,54 @@ options(int argc, char **argv)
         fail("choose one target: wallpaper, fullscreen preview, or an existing window");
     if (opt.wallpaper && !mode_chosen) opt.mode = MODE_ALTERNATE;
     if (opt.idle && !opt.wallpaper) fail("--idle requires --wallpaper");
+    if (opt.idle && !LIFE_HAVE_XSS)
+        fail("idle detection was disabled at build time; install libXss and rebuild, or use XScreenSaver");
     return opt;
+}
+
+static bool
+limited_desktop(Display *display)
+{
+    int opcode, event, error;
+    /* Xwayland cannot manage native Wayland windows or observe all their input. */
+    if (XQueryExtension(display, "XWAYLAND", &opcode, &event, &error)) return true;
+    const char *session = getenv("XDG_SESSION_TYPE");
+    if (session && !strcmp(session, "wayland")) return true;
+    if (getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) return true;
+#ifdef __APPLE__
+    return true;
+#else
+    return false;
+#endif
+}
+
+static int
+doctor(const struct options *opt)
+{
+    printf("Game of Life %s\nLibrary: %zu figures\n", LIFE_VERSION, figure_count);
+    Display *display = XOpenDisplay(opt->display);
+    if (!display) {
+        puts("Display: unavailable\nOpen a terminal in your graphical session.\n"
+             "On macOS, install/start XQuartz and sign in again.\n"
+             "On Windows, use WSL 2 with WSLg. Do not set DISPLAY to :0 blindly.");
+        return EXIT_FAILURE;
+    }
+    bool desktop = !limited_desktop(display);
+    bool idle = false;
+#if LIFE_HAVE_XSS
+    int event, error;
+    idle = XScreenSaverQueryExtension(display, &event, &error);
+#endif
+    XFontStruct *font = XLoadQueryFont(display, "6x10");
+    if (!font) font = XLoadQueryFont(display, "fixed");
+    printf("Display: %s\nPreview: %s\nWallpaper: %s\nIdle screensaver: %s\n",
+           DisplayString(display), font ? "ready" : "missing X11 core fonts",
+           desktop ? "X11 session; desktop-dependent" : "unavailable in this session; use preview",
+           desktop && idle ? "ready" : "unavailable; use preview or an external screensaver");
+    bool fonts_available = font != NULL;
+    if (font) XFreeFont(display, font);
+    XCloseDisplay(display);
+    return fonts_available ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static double
@@ -388,10 +481,12 @@ draw(struct app *app)
          * only after an expose, a resize or a scene change. Core fonts are Latin-1. */
         char label[128];
         if (app->scene == MODE_FIGURE)
-            snprintf(label, sizeof(label), "Mode : une figure - %s", app->figure->name);
+            snprintf(label, sizeof(label), app->options.english ? "Figure: %s" : "Mode : une figure - %s",
+                     app->figure->name);
         else
-            snprintf(label, sizeof(label), "Mode : %s", app->scene == MODE_RANDOM
-                     ? "al\351atoire" : "figures al\351atoires");
+            snprintf(label, sizeof(label), "%s", app->options.english
+                     ? (app->scene == MODE_RANDOM ? "Mode: random" : "Mode: random figures")
+                     : (app->scene == MODE_RANDOM ? "Mode : al\351atoire" : "Mode : figures al\351atoires"));
         int length = (int)strlen(label);
         while (length && XTextWidth(app->font, label, length) > app->width - 16) --length;
         XSetForeground(app->display, app->gc, app->colors[LIFE_ALIVE + 13]);
@@ -399,9 +494,11 @@ draw(struct app *app)
                     app->width - 8 - XTextWidth(app->font, label, length),
                     app->height - 8 - app->font->descent, label, length);
         if (app->own_window) {
-            const char *hint = app->presenting
-                ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
-                : "Clic gauche = suivant ; clic droit = pr\351c\351dent";
+            const char *hint = app->options.english
+                ? (app->presenting ? "Left click = next ; right click = previous ; any key = desktop"
+                                   : "Left click = next ; right click = previous")
+                : (app->presenting ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
+                                   : "Clic gauche = suivant ; clic droit = pr\351c\351dent");
             int hint_length = (int)strlen(hint);
             if (XTextWidth(app->font, hint, hint_length) +
                 XTextWidth(app->font, label, length) + 40 <= app->width)
@@ -430,15 +527,19 @@ static void
 open_window(struct app *app)
 {
     app->display = XOpenDisplay(app->options.display);
-    if (!app->display) fail("cannot open X display");
+    if (!app->display) fail("cannot open X display; run game_of_life --doctor for help");
     Display *display = app->display;
     int screen = DefaultScreen(display);
     Window root = app->root = RootWindow(display, screen);
+    if (app->options.wallpaper && limited_desktop(display))
+        fail("wallpaper/idle modes need an X11 desktop; use --alternate for a preview in this session");
+#if LIFE_HAVE_XSS
     if (app->options.idle) {
         int event, error;
         if (!XScreenSaverQueryExtension(display, &event, &error))
             fail("--idle needs the X11 screen saver extension");
     }
+#endif
     const char *provided = getenv("XSCREENSAVER_WINDOW");
     app->window = app->options.window;
     if (!app->options.wallpaper && !app->window && provided && *provided)
@@ -522,6 +623,7 @@ return_to_desktop(struct app *app)
 static void
 check_idle(struct app *app, double time)
 {
+#if LIFE_HAVE_XSS
     if (!app->options.idle || app->presenting || time < app->idle_check) return;
     app->idle_check = time + 1;
     if (time < app->idle_after) return;
@@ -542,6 +644,10 @@ check_idle(struct app *app, double time)
     }
     app->presenting = app->visible = app->redraw = true;
     XRaiseWindow(app->display, app->window);
+#else
+    (void)app;
+    (void)time;
+#endif
 }
 
 static void
@@ -598,6 +704,7 @@ int
 main(int argc, char **argv)
 {
     struct app app = {.options = options(argc, argv)};
+    if (app.options.doctor) return doctor(&app.options);
     struct sigaction action = {.sa_handler = stop};
     sigemptyset(&action.sa_mask);
     sigaction(SIGINT, &action, NULL);

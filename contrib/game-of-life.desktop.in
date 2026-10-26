@@ -1,0 +1,28 @@
+[Desktop Entry]
+Type=Application
+Name=Game of Life
+GenericName=Living patterns
+GenericName[fr]=Figures vivantes
+Comment=810 tiny worlds. Mint births, blue trails, golden colonies.
+Comment[fr]=810 petits mondes. Naissances menthe, traces bleues, colonies dorées.
+Exec="@LIFE_DESKTOP_EXEC@" --alternate
+Icon=game-of-life
+Terminal=false
+Categories=Game;Simulation;
+Keywords=Life;Conway;Screensaver;Patterns;
+Actions=Pulsar;Bunnies;Fullscreen;
+
+[Desktop Action Pulsar]
+Name=Watch a pulsar
+Name[fr]=Observer un pulsar
+Exec="@LIFE_DESKTOP_EXEC@" --figure pulsar
+
+[Desktop Action Bunnies]
+Name=Watch Bunnies bloom
+Name[fr]=Voir Bunnies exploser
+Exec="@LIFE_DESKTOP_EXEC@" --figure bunnies
+
+[Desktop Action Fullscreen]
+Name=Immersive preview
+Name[fr]=Aperçu immersif
+Exec="@LIFE_DESKTOP_EXEC@" --fullscreen --alternate

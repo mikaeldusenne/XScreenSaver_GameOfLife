@@ -1,0 +1,106 @@
+.TH GAME-OF-LIFE 1 "October 2026" "Game of Life" "User Commands"
+.SH NAME
+game-of-life \- small, colorful Conway Life worlds for X11
+.SH SYNOPSIS
+.B game-of-life
+.RI [ command ] " [options]"
+.br
+.B game_of_life
+.RI [ options ]
+.SH DESCRIPTION
+Watch 810 classic Life patterns grow, move and interact. Mint births, blue
+trails and golden colonies are drawn at 15 frames per second by default.
+Single figures have room to develop. Scene durations follow their behavior.
+.SH COMMANDS
+.TP
+.B preview
+Alternate random cells, a single known figure and a sparse mix. The default.
+.TP
+.BI figure " name"
+Show one instance of the named figure.
+.TP
+.B mix
+Scatter separated figures from the library.
+.TP
+.B random
+Start with random cells.
+.TP
+.BI figures " [text]"
+List the library, optionally filtering names and families.
+.TP
+.B wallpaper
+Draw underneath applications in an X11 desktop.
+.TP
+.B screensaver
+Wallpaper plus an interactive screensaver after 120 idle seconds.
+.TP
+.B doctor
+Report the available display, fonts, wallpaper and idle capabilities.
+.SH OPTIONS
+Options are passed to game_of_life and may follow a command.
+.TP
+.BI \-\-fps " N"
+Maximum frame rate, 1 to 60; default 15.
+.TP
+.BI \-\-size " N"
+Cell size in pixels, 1 to 128; 0 chooses an economical grid automatically.
+.TP
+.BI \-\-trail " N"
+Trail length, 0 to 31 generations; default 18.
+.TP
+.BI \-\-seconds " N"
+Fixed scene duration, 10 to 3600 seconds; 0 uses adaptive timing.
+.TP
+.BI \-\-idle " N"
+Inactivity threshold for wallpaper presentation; 0 disables, 1 to 86400 enables.
+Requires libXss and an X11 desktop. Mouse movement leaves the saver displayed
+so that clicks can navigate; any key returns to the desktop.
+.TP
+.BI \-\-lang " en|fr"
+Caption language. The default follows LC_ALL, LC_MESSAGES, then LANG.
+.TP
+.B \-\-fullscreen
+Fullscreen preview. Any key exits; mouse clicks navigate.
+.TP
+.BI \-\-seed " N"
+Reproduce the initial world at identical dimensions.
+.TP
+.BI \-\-display " DISPLAY"
+Select an X server.
+.TP
+.BI \-\-window-id " ID"
+Draw in an existing window. Its host manages input and lifetime.
+.TP
+.B \-root
+Draw in XSCREENSAVER_WINDOW if provided, otherwise in the X11 root window.
+.TP
+.B \-\-help, \-\-version
+Print help or version/build capabilities without opening a display.
+.SH CONTROLS
+Left click advances. Right click replays the preceding scene from its beginning.
+The last 64 scene seeds are retained. Space advances in windowed preview;
+Escape or Q closes it. Any key dismisses the idle saver while keeping the
+wallpaper alive. Host-managed windows, including XScreenSaver, keep their own
+input handling.
+.SH PLATFORMS
+Linux and BSD X11 desktops can run wallpaper and idle modes. Desktop shells
+may cover a wallpaper window. macOS with XQuartz, Wayland with Xwayland and
+Windows with WSLg can run the windowed preview; they do not gain native
+wallpaper, idle detection or session locking through this program.
+.SH FILES
+No user configuration is required. No networking is performed. Patterns are
+compiled into the executable. Installing does not enable autostart or change
+screen power settings. The idle saver is not a session lock.
+.SH EXAMPLES
+.nf
+game-of-life figure pulsar
+game-of-life figures gun
+game-of-life mix --fps 10
+game-of-life screensaver --idle 300
+game-of-life doctor
+.fi
+.SH SEE ALSO
+.BR xscreensaver (1),
+.BR xset (1)
+.br
+https://github.com/mikaeldusenne/XScreenSaver_GameOfLife
