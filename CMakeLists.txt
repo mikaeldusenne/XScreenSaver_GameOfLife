@@ -63,6 +63,8 @@ install(FILES contrib/game-of-life.svg
 install(FILES contrib/game-of-life.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 install(FILES README.md LICENSE FIGURES.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs)
+install(DIRECTORY ci/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/ci)
+install(FILES bench/README.md bench/results.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
 install(FILES img/preview.png img/figure-pulsar.png img/figure-koks-galaxy.png
         img/figure-bunnies.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)
 install(FILES contrib/game-of-life.svg DESTINATION ${CMAKE_INSTALL_DOCDIR}/contrib)

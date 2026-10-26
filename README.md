@@ -2,7 +2,7 @@
 
 # Game of Life · cheap & beautiful
 
-**810 small worlds. Room to grow. Almost nothing to install.**
+**810 small worlds. Room to grow. One tiny program.**
 
 Mint births, midnight-blue trails, golden colonies. A tiny C99 + Xlib program
 that turns Conway's Life into something worth leaving on your screen.
@@ -62,7 +62,7 @@ The library includes 148 still lifes, 387 oscillators, 90 spaceships, 15 guns,
 14 puffers, 5 rakes, 25 long-lived seeds and 126 other evolving patterns.
 [Browse the catalogue](FIGURES.md), or search it from the terminal.
 
-## An honest platform map
+## Platforms
 
 | Platform | What you get |
 | --- | --- |
@@ -97,7 +97,9 @@ pause. See the [historical CPU benchmarks](bench/README.md) for measurements and
 their limits; these are not electricity-consumption measurements.
 
 CMake supports staging with `DESTDIR` and building native TGZ, DEB or RPM
-packages via CPack. A [ready-to-enable CI recipe](ci/README.md) covers Linux
+packages via CPack. Builds and simulation checks pass on Arch, Debian, Fedora
+and Alpine; the DEB and RPM have been installed in clean containers.
+A [ready-to-enable CI recipe](ci/README.md) covers Linux
 x86-64/ARM64, macOS Intel/Apple Silicon, and Alpine. It is provided as a template,
 not an active workflow or a claim that every platform has been tested.
 [Build and packaging details](docs/INSTALL.md#cmake-packaging-and-the-small-makefile).

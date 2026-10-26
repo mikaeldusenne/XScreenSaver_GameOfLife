@@ -21,6 +21,17 @@ Known Wayland, WSL and macOS sessions reject `--wallpaper` explicitly. An X11
 window existing on a system does not imply control of its whole desktop.
 The idle saver is an animation, not a session lock.
 
+### Verified builds
+
+On 26 October 2026, compilation and all existing simulation checks passed on
+Arch Linux (GCC and Clang), Debian 12, Fedora 43 and Alpine 3.22/musl. Installation
+and removal were exercised in temporary prefixes, including paths with spaces.
+The DEB and RPM were also installed in clean Debian/Fedora containers with their
+declared runtime dependencies. X11 rendering and input were checked on the local
+Linux system using isolated Xvfb sessions. macOS, BSD and ARM desktop execution
+have not been verified in this session; the source recipes and optional CI
+matrix describe the intended build paths rather than additional test results.
+
 ## 1. Install build dependencies
 
 Choose your platform. These commands use your package manager; the project
