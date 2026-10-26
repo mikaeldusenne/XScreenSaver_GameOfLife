@@ -184,7 +184,7 @@ static void reinit_board(int size){
 	timecount = 0;
 	
 	for(k=0; k<2; k++){
-		for(i=0; i<SQ; i++){
+		for(i=0; i<=SQ; i++){
 			if( i < nx+1 || i+nx+1 >= SQ || i%(nx+1) == 0 ){
 				boards[k][i] = -1;
 			}
@@ -325,7 +325,8 @@ game_of_life_init (Display *dpy, Window window){
 
 	boards = malloc( 2 * sizeof ( int* ));
 	for( i=0; i<2; i++){
-		boards[i] = malloc(SQ * sizeof(int));
+		/* The bottom-right diagonal lookup can reach the sentinel at SQ. */
+		boards[i] = malloc((SQ + 1) * sizeof(int));
 	}
 	
 		
@@ -425,7 +426,7 @@ game_of_life_draw (Display *dpy, Window window, void *closure){
   /* 	  st->scrollcount = 0; */
   /* } */
   
-  /* st->px.index=0; */
+  st->px.index = 0;
 
   
 /*  int is[NSTEP] = {0}; */
@@ -666,4 +667,5 @@ game_of_life_free (Display *dpy, Window window, void *closure)
 	destroy_stack(&((struct state *)closure)->px);
 }
 
-XSCREENSAVER_MODULE ("GameOfLife", game_of_lifs)
+XSCREENSAVER_MODULE ("GameOfLife", game_of_life)
+
