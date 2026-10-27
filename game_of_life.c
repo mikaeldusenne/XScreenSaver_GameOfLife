@@ -392,7 +392,9 @@ seed(struct app *app)
     int footer = app->font->ascent + app->font->descent + 16;
     if (height > footer + 16 && width >= 40) height -= footer;
     const struct figure *figure = app->scene == MODE_FIGURE ? app->figure : NULL;
-    int size = scene_cell_size(width, height, app->options.size, figure);
+    int size = app->scene == MODE_RANDOM
+        ? scene_random_cell_size(width, height, app->options.size)
+        : scene_cell_size(width, height, app->options.size, figure);
     int columns = width / size, rows = height / size;
     if (!columns) columns = 1;
     if (!rows) rows = 1;
@@ -504,8 +506,15 @@ draw(struct app *app)
         XSetClipRectangles(app->display, app->gc, 0, 0, &view, 1, Unsorted);
     }
     for (int y = 0; y < life->rows; ++y) {
-        for (int x = 0; x < life->columns; ++x) {
+        int left = app->redraw ? 0 : life->dirty_left[y];
+        int right = app->redraw ? life->columns : life->dirty_right[y];
+        for (int x = left; x < right; ++x) {
             int i = (y + 1) * life->stride + x + 1;
+            if (!app->redraw && !(x & 7) && x + 8 <= right &&
+                !memcmp(life->cells + i, life->previous + i, 8)) {
+                x += 7;
+                continue;
+            }
             int color = life->cells[i];
             if (app->redraw ? !color : color == life->previous[i]) continue;
             int run = 1;

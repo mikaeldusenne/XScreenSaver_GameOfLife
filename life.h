@@ -13,6 +13,8 @@ struct life {
     int columns, rows, stride;
     size_t length;
     uint8_t *cells, *previous;
+    /* Conservative changed span per row, [left, right); empty when left >= right. */
+    int *dirty_left, *dirty_right;
     uint32_t random;
     uint64_t hash;
     unsigned population, changes;

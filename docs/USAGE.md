@@ -138,6 +138,19 @@ and expansive seeds.
 
 ## Tune without fuss
 
+Random worlds use an automatic budget of 256,000 cells, with cells at least two
+pixels wide. At 1920 × 1080 that means 3-pixel cells, roughly 640 × 350 rather
+than the previous 320 × 175 (the exact height depends on the caption font).
+The random scenes in alternation use this finer grid too. Figure mixes retain
+their 64,000-cell budget; single figures retain their breathing-room zoom.
+
+The beginning of a random world does more work: many cells and colored trails
+change at once. CPU use falls as it settles. The simulation still runs every
+generation; rules, palette and trails are unchanged. The renderer skips
+unchanged rows and groups of cells. `--size 6` restores the previous Full HD
+density; `--fps 10` trades some animation speed for a lower CPU cost.
+[Measurements and limitations](../bench/DENSE.md).
+
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `--fps N` | 15 | Maximum frame rate, 1–60 |

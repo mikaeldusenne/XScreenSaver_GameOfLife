@@ -1,0 +1,27 @@
+{
+  "baseline_commit": "dab32e9",
+  "baseline_version": "0.3.0",
+  "new_version": "0.4.0",
+  "cpu": "Intel Core i7-8750H",
+  "compiler": "cc (GCC) 16.2.1 20260810",
+  "flags": "-O3 -std=c99",
+  "fps": 15,
+  "frame_probe": "XSync after XFlush; bench/frames.c",
+  "compute_warmups": [
+    32,
+    1024
+  ],
+  "compute_generations": 300,
+  "source_sha256": {
+    "life.c": "ea482921149e7828458eae2232687aa4fe501359558ca7ae7b79462e8e57ad35",
+    "life.h": "a64b03153ea7ef56d7e22994abdf558e34398ae6c28cf35dcfcd1ca528e90d8a",
+    "game_of_life.c": "b5ebb78c1f5ef5e248c116dd860c70b67fe1a762226bd83eeef5d8941df58ea7",
+    "scene.c": "8bb644ab9199dfce301477292ef74a254b79203915123ac4bd5a9b79374971f7",
+    "scene.h": "33d5f153ac80cb3d1aa9f66b28a4d2ab985fa38d2762a396671a730c35f4a8d7",
+    "bench/frames.c": "a1026da927df331b03df0eaed0c0bfc94c5f0b08730b95f0c7c567b01bd354be"
+  },
+  "binary_sha256": {
+    "/tmp/life-v030-render": "c5cded5886d059439479bb0a02f350a1883c226594599e073a72f6e74a734664",
+    "/tmp/life-dense-render": "3bb3e6e4e8876f4d2e94604862e9b0739ff54c1c632276af20f1a50bc82a6023"
+  }
+}

@@ -221,17 +221,21 @@ Wayland. `make uninstall` retire le binaire installé. `PREFIX`, `BINDIR` et
 - **15 images/s**, avec attente bloquante entre les images et aucune rafale de
   rattrapage. La simulation s’arrête quand la fenêtre est entièrement masquée
   ou démappée.
-- **Environ 64 000 cellules maximum par défaut**, grâce à une taille automatique
-  adaptée à la résolution. En modes aléatoire et mélange de figures, à
-  1920 × 1080, la grille contient 320 × 175 cellules avec la légende ;
-  à 3840 × 2160, elle contient 320 × 177 cellules.
-  `-size` permet de choisir explicitement une autre densité.
+- **Budget de 256 000 cellules pour les mondes aléatoires**, grâce au moteur
+  optimisé de la version 0.4. En Full HD, environ 640 × 350 cellules de 3 pixels
+  remplacent les 320 × 175 cellules de 6 pixels : quatre fois plus de cellules.
+  La hauteur exacte dépend de la police de légende. Les mélanges de figures
+  gardent leur budget de 64 000 cellules, les figures seules leur zoom adapté.
+  `-size 6` retrouve l’ancienne densité en Full HD.
 - **Deux grilles d’un octet par cellule** : état, âge et trace sont encodés ensemble.
   Une troisième marque les emplacements déjà explorés, une fois par seconde.
   Aucun tableau de hachage par pixel, aucune allocation pendant une génération.
 - **Dessin différentiel**, par lots de rectangles de même couleur. Une cellule
   inchangée ne produit aucune commande de dessin. Aucun effacement global à
   chaque image, aucun moteur 3D, aucune texture plein écran.
+- **Huit cellules calculées ensemble**, dans les huit octets d’un entier 64 bits,
+  en C99 portable. Les portions de lignes inchangées sont sautées lors du dessin.
+  Le démarrage d’un monde aléatoire reste plus coûteux que sa phase stabilisée.
 - **Un halo d’une cellule** fait boucler la grille sans modulo dans la boucle
   de simulation. Les règles restent celles de Conway, B3/S23 ; les traces ne
   comptent jamais comme des cellules vivantes.
@@ -268,10 +272,12 @@ des budgets de générations à la cadence demandée, hors pause et effacement.
 Une grille explicitement trop grande est refusée au-delà de 4 Mio par tampon.
 La cadence est un plafond ; elle baisse si le dessin prend du temps.
 
-Le [benchmark détaillé sur l’affichage réel et sous Xvfb, jusqu’en 8K](../bench/README.md)
+Les [mesures du moteur 0.4](../bench/DENSE.md) suivent le CPU au démarrage puis
+pendant le développement du monde. Le
+[benchmark historique sur l’affichage réel et sous Xvfb, jusqu’en 8K](../bench/README.md)
 compare les résolutions et les densités du mode aléatoire sur un **Core i7-8750H**,
 avant l’ajout de la bibliothèque de figures.
-Sur l’écran Full HD testé, `-size 4` atteint environ **10 % d’un cœur logique**
+Sur l’ancienne version Full HD testée, `-size 4` atteignait environ **10 % d’un cœur logique**
 pour le programme et le serveur graphique réunis ; `-size 5` garde une marge
 autour de **7 %**, avec **3,3 Mo de RAM résidente** pour le programme.
 Le binaire avec sa bibliothèque fait environ 260 Ko. En 4K automatique sous Xvfb,

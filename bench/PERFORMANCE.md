@@ -1,5 +1,8 @@
 # Historique compact et efficacité — 27 octobre 2026
 
+Cette campagne décrit la version 0.3. Voir les [mesures de la version 0.4](DENSE.md)
+pour le calcul de huit cellules à la fois et la nouvelle définition par défaut.
+
 Le moteur réutilise maintenant les sommes verticales de trois cellules pour
 faire glisser son voisinage : trois nouvelles comparaisons de voisinage par
 cellule, au lieu de huit. Les règles, âges, traces, empreintes et bords toriques

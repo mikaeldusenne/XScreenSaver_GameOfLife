@@ -3,6 +3,8 @@
 Les chiffres ci-dessous décrivent la version du 26 octobre. Voir aussi les
 [mesures avant/après optimisation du 27 octobre](PERFORMANCE.md), qui séparent
 le calcul seul du coût du dessin et expliquent l’historique compact.
+La [campagne 0.4](DENSE.md) mesure ensuite les nouveaux mondes quatre fois plus
+denses, du démarrage à leur phase plus calme.
 
 Sur l’écran réel **1920 × 1080**, la limite raisonnable à une cible de 15 images/s
 est **480 × 270 cellules** (`-size 4`) : environ **10 % d’un cœur logique** pour

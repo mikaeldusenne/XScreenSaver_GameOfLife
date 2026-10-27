@@ -16,6 +16,7 @@ struct scene {
 
 /* Automatic zoom leaves room to evolve; an explicit size still fits the seed. */
 int scene_cell_size(int width, int height, int requested, const struct figure *figure);
+int scene_random_cell_size(int width, int height, int requested);
 bool scene_reset(struct scene *scene, const struct life *life,
                  const struct figure *figure, unsigned fps, unsigned seconds);
 /* Call once per simulated generation. Hidden windows do not consume this budget. */

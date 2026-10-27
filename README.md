@@ -59,7 +59,8 @@ No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-
 - **Time to see it.** Still lifes, oscillators, producers and explosions get
   different observation budgets. Settled random worlds give way to fresh ones.
 - **Quiet when hidden.** A fully covered wallpaper pauses. Rendering batches
-  only changed cells, at 15 fps and roughly 64,000 cells by default.
+  only changed cells, at 15 fps. Random worlds now have a budget of 256,000
+  cells: about four times the previous definition in Full HD.
 - **One small executable.** Around 260 KB on the development machine, including
   all 810 figures. No network access, 3D engine or runtime asset downloads.
 
@@ -102,6 +103,8 @@ pause. See the [historical CPU benchmarks](bench/README.md) for measurements and
 their limits; these are not electricity-consumption measurements.
 The [latest performance notes](bench/PERFORMANCE.md) compare the optimized
 neighbor calculation and X11 drawing separately, and discuss further options.
+See the [denser-world measurements](bench/DENSE.md) for the 0.4 engine and CPU
+usage as random worlds develop and settle.
 
 CMake supports staging with `DESTDIR` and building native TGZ, DEB or RPM
 packages via CPack. Builds and simulation checks pass on Arch, Debian, Fedora

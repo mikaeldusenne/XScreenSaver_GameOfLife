@@ -13,6 +13,15 @@ kind(const struct figure *figure, const char *name)
 }
 
 int
+scene_random_cell_size(int width, int height, int requested)
+{
+    if (requested) return requested;
+    int size = 2;
+    while ((width / size) * (height / size) > 256000) ++size;
+    return size;
+}
+
+int
 scene_cell_size(int width, int height, int requested, const struct figure *figure)
 {
     int cheap = 4;

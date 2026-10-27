@@ -35,23 +35,24 @@ cpu_time(void)
 int
 main(int argc, char **argv)
 {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: %s columns rows generations seed\n", argv[0]);
+    if (argc != 5 && argc != 6) {
+        fprintf(stderr, "Usage: %s columns rows generations seed [warmup-generations]\n", argv[0]);
         return EXIT_FAILURE;
     }
     int columns = (int)argument(argv[1], 32767), rows = (int)argument(argv[2], 32767);
     unsigned long generations = argument(argv[3], 10000000);
+    unsigned long warmup = argc == 6 ? argument(argv[5], 10000000) : 32;
     uint32_t seed = (uint32_t)argument(argv[4], UINT32_MAX);
     struct life life = {.random = seed};
     if (!generations || !life_resize(&life, columns, rows)) return EXIT_FAILURE;
     life_seed(&life);
-    for (int i = 0; i < 32; ++i) life_step(&life, 18, false);
+    for (unsigned long i = 0; i < warmup; ++i) life_step(&life, 18, false);
     double start = cpu_time();
     for (unsigned long i = 0; i < generations; ++i) life_step(&life, 18, false);
     double elapsed = cpu_time() - start;
-    printf("{\"columns\":%d,\"rows\":%d,\"generations\":%lu,\"seed\":%" PRIu32 ","
+    printf("{\"columns\":%d,\"rows\":%d,\"generations\":%lu,\"warmup\":%lu,\"seed\":%" PRIu32 ","
            "\"ms_per_generation\":%.6f,\"hash\":\"%016" PRIx64 "\",\"population\":%u}\n",
-           columns, rows, generations, seed, elapsed * 1000 / (double)generations,
+           columns, rows, generations, warmup, seed, elapsed * 1000 / (double)generations,
            life.hash, life.population);
     life_free(&life);
     return EXIT_SUCCESS;
