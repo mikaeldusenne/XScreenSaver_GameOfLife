@@ -3,13 +3,17 @@ PKG_CONFIG ?= pkg-config
 CFLAGS ?= -O2
 CFLAGS += -std=c99 -Wall -Wextra -Wpedantic
 WITH_XSS ?= $(shell $(PKG_CONFIG) --exists xscrnsaver 2>/dev/null && echo 1 || echo 0)
+WITH_GPU ?= $(shell test "$$(uname -s)" != Darwin && $(PKG_CONFIG) --exists epoxy 2>/dev/null && echo 1 || echo 0)
 X11_PACKAGES = x11
 ifeq ($(WITH_XSS),1)
 X11_PACKAGES += xscrnsaver
 endif
+ifeq ($(WITH_GPU),1)
+X11_PACKAGES += epoxy
+endif
 X11_CFLAGS := $(shell $(PKG_CONFIG) --cflags $(X11_PACKAGES) 2>/dev/null)
 X11_LIBS := $(shell $(PKG_CONFIG) --libs $(X11_PACKAGES) 2>/dev/null)
-APP_CPPFLAGS = -DLIFE_HAVE_XSS=$(WITH_XSS) -DLIFE_VERSION='"$(shell cat VERSION)"'
+APP_CPPFLAGS = -DLIFE_HAVE_XSS=$(WITH_XSS) -DLIFE_HAVE_GPU=$(WITH_GPU) -DLIFE_VERSION='"$(shell cat VERSION)"'
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
 
@@ -19,8 +23,8 @@ all: game_of_life
 check-deps:
 	@$(PKG_CONFIG) --exists $(X11_PACKAGES) || { echo 'Install X11 development packages; see docs/INSTALL.md (or use CMake).'; exit 1; }
 
-game_of_life: game_of_life.c life.c life.h figures.c figures.h figures_data.inc scene.c scene.h journal.c journal.h VERSION Makefile | check-deps
-	$(CC) $(CPPFLAGS) $(APP_CPPFLAGS) $(CFLAGS) $(X11_CFLAGS) $(LDFLAGS) -o $@ game_of_life.c life.c figures.c scene.c journal.c $(X11_LIBS) $(LDLIBS)
+game_of_life: game_of_life.c gpu.c gpu.h life.c life.h figures.c figures.h figures_data.inc scene.c scene.h journal.c journal.h VERSION Makefile | check-deps
+	$(CC) $(CPPFLAGS) $(APP_CPPFLAGS) $(CFLAGS) $(X11_CFLAGS) $(LDFLAGS) -o $@ game_of_life.c gpu.c life.c figures.c scene.c journal.c $(X11_LIBS) $(LDLIBS)
 
 check: tests/life_test tests/figures_test tests/scene_test
 	./tests/life_test

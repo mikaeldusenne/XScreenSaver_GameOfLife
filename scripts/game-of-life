@@ -19,7 +19,7 @@ case $command in
     mix) exec "$renderer" --random-figures "$@" ;;
     random) exec "$renderer" --random "$@" ;;
     replay)
-        if [ "$#" -eq 0 ]; then set -- 0; fi
+        case ${1:-} in ''|-*) set -- 0 "$@" ;; esac
         exec "$renderer" --replay "$@" ;;
     wallpaper) exec "$renderer" --wallpaper "$@" ;;
     screensaver) exec "$renderer" --wallpaper --idle 120 "$@" ;;
@@ -42,9 +42,11 @@ Game of Life — cheap & beautiful
   game-of-life replay 42               Replay line 42 of the wallpaper journal
   game-of-life replay                  Replay its last complete line
   game-of-life doctor                  Check this display's capabilities
+  game-of-life doctor --gpu            Check the optional OpenGL engine
+  game-of-life random --gpu --size 1    Compute and draw a fine world on the GPU
 
 Left click: next. Right click: previous. In the saver, any key returns to work.
-Renderer options can follow a command: --fps 10, --idle 300, --lang fr, ...
+Renderer options can follow a command: --gpu, --cpu, --fps 10, --idle 300, ...
 All options: game_of_life --help. Manual: man game-of-life.
 HELP
         ;;

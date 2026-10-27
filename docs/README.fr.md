@@ -216,6 +216,24 @@ Cette version cible **X11 / XScreenSaver** ; elle n’est pas un économiseur na
 Wayland. `make uninstall` retire le binaire installé. `PREFIX`, `BINDIR` et
 `DESTDIR` sont configurables pour l’installation et le packaging.
 
+## Un moteur GPU en option
+
+Le moteur CPU reste le choix par défaut. `--gpu` active le calcul et le dessin
+OpenGL 4.3, avec les mêmes figures, couleurs, traces, commandes et historiques.
+La taille automatique reste identique ; `--size 1` permet d’essayer un monde
+plus fin. Le programme se compile aussi sans aucune dépendance OpenGL.
+
+```sh
+game-of-life doctor --gpu
+game-of-life random --gpu --size 1 --fullscreen
+game-of-life mix --gpu
+game-of-life preview --cpu
+```
+
+[Installation GPU et limites](GPU.md). La baisse du CPU ne suffit pas à prouver
+une baisse de consommation électrique. Une carte dédiée peut coûter plus cher
+à maintenir active ; le fond masqué continue de suspendre toute simulation.
+
 ## Pourquoi c’est léger
 
 - **15 images/s**, avec attente bloquante entre les images et aucune rafale de
@@ -234,7 +252,7 @@ Wayland. `make uninstall` retire le binaire installé. `PREFIX`, `BINDIR` et
 - **Deux grilles d’un octet par cellule** : état, âge et trace sont encodés ensemble.
   Une troisième marque les emplacements déjà explorés, une fois par seconde.
   Aucun tableau de hachage par pixel, aucune allocation pendant une génération.
-- **Dessin différentiel**, par lots de rectangles de même couleur. Une cellule
+- **Dessin différentiel sur CPU**, par lots de rectangles de même couleur. Une cellule
   inchangée ne produit aucune commande de dessin. Aucun effacement global à
   chaque image, aucun moteur 3D, aucune texture plein écran.
 - **Huit cellules calculées ensemble**, dans les huit octets d’un entier 64 bits,

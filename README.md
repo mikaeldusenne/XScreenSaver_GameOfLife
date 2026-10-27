@@ -35,6 +35,7 @@ game-of-life figures gun         # Find something new
 game-of-life screensaver         # X11 wallpaper + saver after two idle minutes
 game-of-life replay              # Revisit the last recorded wallpaper world
 game-of-life doctor              # What can this session do?
+game-of-life random --gpu --size 1 # Try the optional GPU engine, one pixel per cell
 ```
 
 **Left click → next. Right click → previous.** In the idle saver, any key brings
@@ -59,10 +60,16 @@ No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-
 - **Time to see it.** Still lifes, oscillators, producers and explosions get
   different observation budgets. Settled random worlds give way to fresh ones.
 - **Quiet when hidden.** A fully covered wallpaper pauses. Rendering batches
-  only changed cells, at 15 fps. Random worlds and figure mixes have a budget of
+  only changed cells in CPU mode, at 15 fps. Random worlds and figure mixes have a budget of
   256,000 cells: about four times the previous definition in Full HD.
-- **One small executable.** Around 260 KB on the development machine, including
-  all 810 figures. No network access, 3D engine or runtime asset downloads.
+- **One small executable.** Around 290 KB with GPU support on the development
+  machine, including all 810 figures. No network access or runtime asset downloads.
+
+**CPU by default, GPU when you choose.** `--gpu` computes and draws Life with
+OpenGL 4.3. The original CPU/Xlib engine stays available with `--cpu`, including
+builds without any OpenGL dependency. Both engines share the same figures,
+palette, controls and replayable initial worlds. Check `game-of-life doctor --gpu`
+before trying it. [GPU setup and tradeoffs](docs/GPU.md).
 
 The library includes 148 still lifes, 387 oscillators, 90 spaceships, 15 guns,
 14 puffers, 5 rakes, 25 long-lived seeds and 126 other evolving patterns.
@@ -104,7 +111,8 @@ their limits; these are not electricity-consumption measurements.
 The [latest performance notes](bench/PERFORMANCE.md) compare the optimized
 neighbor calculation and X11 drawing separately, and discuss further options.
 See the [denser-world measurements](bench/DENSE.md) for the 0.4 engine and CPU
-usage as random worlds develop and settle.
+usage as random worlds develop and settle. The [GPU measurements](bench/GPU.md)
+compare the optional 0.5 engine on a real display.
 
 CMake supports staging with `DESTDIR` and building native TGZ, DEB or RPM
 packages via CPack. Builds and simulation checks pass on Arch, Debian, Fedora

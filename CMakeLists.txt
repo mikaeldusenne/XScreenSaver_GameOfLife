@@ -12,6 +12,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 option(LIFE_WITH_XSS "Build the optional X11 idle screensaver" ON)
+option(LIFE_WITH_GPU "Build the optional OpenGL 4.3 engine when libepoxy is available" ON)
 option(BUILD_TESTING "Build the existing simulation checks" OFF)
 include(GNUInstallDirs)
 find_package(X11 REQUIRED)
@@ -21,8 +22,21 @@ endif()
 
 add_library(life_core STATIC life.c figures.c scene.c journal.c)
 target_include_directories(life_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-add_executable(game_of_life game_of_life.c)
+add_executable(game_of_life game_of_life.c gpu.c)
 target_link_libraries(game_of_life PRIVATE life_core X11::X11)
+if(LIFE_WITH_GPU AND NOT APPLE)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(EPOXY QUIET IMPORTED_TARGET epoxy)
+  endif()
+endif()
+if(LIFE_WITH_GPU AND NOT APPLE AND EPOXY_FOUND)
+  target_link_libraries(game_of_life PRIVATE PkgConfig::EPOXY)
+  target_compile_definitions(game_of_life PRIVATE LIFE_HAVE_GPU=1)
+else()
+  target_compile_definitions(game_of_life PRIVATE LIFE_HAVE_GPU=0)
+  message(STATUS "Building CPU renderer; optional --gpu needs libepoxy and OpenGL 4.3 at runtime")
+endif()
 target_compile_definitions(game_of_life PRIVATE LIFE_VERSION="${PROJECT_VERSION}")
 if(LIFE_WITH_XSS AND X11_Xss_FOUND)
   target_link_libraries(game_of_life PRIVATE X11::Xss)
@@ -69,6 +83,7 @@ install(FILES bench/README.md bench/results.png bench/PERFORMANCE.md
         bench/DENSE.md bench/dense-compute-2026-10-27.json
         bench/dense-metadata-2026-10-27.json bench/dense-baseline-2026-10-27.json
         bench/dense-render-2026-10-27.json bench/dense-mix-2026-10-27.json
+        bench/GPU.md bench/gpu-render-2026-10-27.json
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
 install(FILES img/preview.png img/figure-pulsar.png img/figure-koks-galaxy.png
         img/figure-bunnies.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)

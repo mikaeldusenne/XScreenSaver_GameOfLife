@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import select
+import shlex
 import signal
 import struct
 import subprocess
@@ -68,6 +69,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
                '-size', str(size), '-fps', str(args.fps), '-seed', str(args.seed),
                '-seconds', '3600', '--mode', getattr(args, 'mode', 'random'),
                '--history', str(history)]
+    if getattr(args, 'engine', 'cpu') == 'gpu':
+        command.append('--gpu')
     # On the real desktop this includes other clients' Xorg/compositor activity.
     initial = sum(cpu_seconds(pid) for pid in servers)
     initial_time = time.monotonic()
@@ -81,7 +84,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
             raise RuntimeError(process.stderr.read().decode() or 'Preview closed during warmup')
         if args.desktop:
             windows = subprocess.check_output(
-                ['xdotool', 'search', '--onlyvisible', '--class', '^GameOfLife$'], text=True).split()
+                ['xdotool', 'search', '--onlyvisible', '--all', '--pid', str(process.pid),
+                 '--class', '^GameOfLife$'], text=True).split()
             if len(windows) != 1:
                 raise RuntimeError('Expected exactly one visible GameOfLife window')
             geometry = subprocess.check_output(
@@ -134,7 +138,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
         result = dict(backend='desktop' if args.desktop else 'Xvfb',
                       width=width, height=height, size=size, actual_size=actual_size,
                       columns=columns, rows=rows, cells=columns * rows, footer_px=footer,
-                      mode=recipe[2], target_fps=args.fps, seed=args.seed, warmup_s=args.warmup,
+                      mode=recipe[2], engine=getattr(args, 'engine', 'cpu'),
+                      target_fps=args.fps, seed=args.seed, warmup_s=args.warmup,
                       elapsed_s=end - start, client_cpu=client, graphics_cpu=server,
                       graphics_baseline_cpu=baseline, total_cpu=client + server,
                       rss_kib=memory, fps=None if args.no_frame_probe else len(frames) / (end - start),
@@ -150,6 +155,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--desktop', action='store_true')
+    parser.add_argument('--engine', choices=('cpu', 'gpu'), default='cpu',
+                        help='GPU needs OpenGL 4.3; Xvfb usually uses software GL, not hardware')
     parser.add_argument('--graphics-pids', default='', help='Comma-separated Xorg/compositor PIDs for --desktop')
     parser.add_argument('--cases', default='1920x1080:0,1920x1080:4,1920x1080:3,1920x1080:2,1920x1080:1,3840x2160:0,3840x2160:8,3840x2160:6,3840x2160:4,7680x4320:0,7680x4320:16')
     parser.add_argument('--seconds', type=float, default=10)
@@ -177,12 +184,15 @@ def main():
         directory = Path(temp)
         binary = args.binary.resolve() if args.binary else (ROOT / 'game_of_life' if args.no_frame_probe else directory / 'game_of_life')
         if not args.no_frame_probe and not args.binary:
+            gpu_flags = (['-DLIFE_HAVE_GPU=1'] + shlex.split(subprocess.check_output(
+                ['pkg-config', '--cflags', '--libs', 'epoxy'], text=True))) if args.engine == 'gpu' else []
             subprocess.run(['cc', '-O3', '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
                             '-DXFlush=bench_flush', str(ROOT / 'game_of_life.c'),
                             str(ROOT / 'life.c'), str(ROOT / 'figures.c'), str(ROOT / 'scene.c'),
                             str(ROOT / 'journal.c'),
+                            str(ROOT / 'gpu.c'),
                             str(ROOT / 'bench/frames.c'),
-                            '-lX11', '-lXss', '-o', str(binary)], check=True)
+                            '-lX11', '-lXss', *gpu_flags, '-o', str(binary)], check=True)
         for index, case in enumerate(args.cases.split(',')):
             dimensions, size = case.split(':')
             width, height = map(int, dimensions.split('x'))

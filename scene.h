@@ -21,6 +21,8 @@ bool scene_reset(struct scene *scene, const struct life *life,
                  const struct figure *figure, unsigned fps, unsigned seconds);
 /* Call once per simulated generation. Hidden windows do not consume this budget. */
 bool scene_finished(struct scene *scene, const struct life *life);
+/* GPU supplies exploration counts; -1 asks the CPU to scan its grid. */
+bool scene_observe(struct scene *scene, const struct life *life, int fresh);
 void scene_free(struct scene *scene);
 
 #endif

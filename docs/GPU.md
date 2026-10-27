@@ -1,0 +1,103 @@
+# An optional GPU engine
+
+[Usage](USAGE.md) · [Installation](INSTALL.md) · [Measurements](../bench/GPU.md)
+
+Version 0.5 adds GPU simulation **and** rendering. The original CPU/Xlib engine
+remains the default. It is still possible to build and install the program
+without any OpenGL dependency.
+
+```sh
+game-of-life doctor --gpu
+game-of-life random --gpu --size 1 --fullscreen
+game-of-life mix --gpu --size 2
+game-of-life figure bunnies --gpu
+game-of-life replay --gpu
+game-of-life replay 42 --gpu
+game-of-life preview --cpu
+```
+
+`--gpu` is opt-in for every command, including `screensaver` and `wallpaper`.
+There is no automatic switch to a different engine. If the build or display
+cannot support it, the program explains the failure; use `--cpu` to continue
+with Xlib. Installing this version does not change existing autostart commands.
+
+## Requirements
+
+- An X11/GLX display with an **OpenGL 4.3 core** driver.
+- **libepoxy** development files when compiling GPU support. Epoxy loads the
+  OpenGL entry points; there is no CUDA, Vulkan or separate shader compiler.
+- An X11 window visual compatible with the driver's GLX framebuffer formats.
+
+Add the appropriate package to the normal build dependencies:
+
+| Platform | Additional development package |
+| --- | --- |
+| Debian / Ubuntu | `libepoxy-dev` |
+| Fedora / openSUSE | `libepoxy-devel` |
+| Arch | `libepoxy` |
+| Alpine | `libepoxy-dev` |
+| FreeBSD | `libepoxy` |
+
+Then rebuild with `./install.sh`. CMake and GNU Make detect libepoxy
+automatically. CPU-only builds remain available:
+
+```sh
+cmake -S . -B build-cpu -DLIFE_WITH_GPU=OFF
+cmake --build build-cpu
+# Or with GNU Make:
+make clean
+make WITH_GPU=0
+```
+
+`game-of-life version` reports whether GPU support was compiled in.
+`game-of-life doctor --gpu` actually creates a context, compiles the shaders
+and names the renderer. **llvmpipe and softpipe mean software rendering on the
+CPU**, even though the OpenGL code path is active. Xvfb commonly uses this for
+correctness checks; it cannot establish hardware GPU performance.
+
+XQuartz/macOS should use the CPU engine: this GPU engine requires OpenGL 4.3.
+BSD, Xwayland and WSLg depend on their GLX driver capabilities; GPU execution
+there has not been validated in this release. The existing restrictions on
+wallpaper and whole-session idle detection still apply.
+
+## Same worlds and controls
+
+Both engines use the same automatic cell size and frame-rate limit. A higher
+definition is explicit: `--size 1` gives roughly two million cells in Full HD;
+`--size 2` does the same on a 4K display. The existing allocation limit remains
+about four million cells, including the CPU grid's border. Larger worlds need
+a larger cell size. A single figure still keeps room around its seed.
+
+The rules, wrapping edges, cell ages, fading trails, palette, captions,
+previous/next navigation, idle presentation and pause when covered are shared.
+The scene's initial state is generated on the CPU, including the 32-generation
+random warmup, so existing `life1` recipes and their checksums remain valid.
+After upload, every animation generation is calculated on the GPU.
+
+The two evolving grids stay in one-byte integer textures on the GPU. A third
+texture remembers explored cells. An OpenGL compute shader applies Conway's
+rules; a fragment shader draws cells and colors. The text is rasterized with
+the existing X11 font only when its caption changes and uploaded as a small
+mask. No full-grid download or CPU simulation runs during the animation.
+
+Twenty bytes of statistics return to the CPU each generation: population,
+changes, exploration and an occupation fingerprint. They are read before
+the next generation, after the regular frame-rate sleep, to avoid immediately
+waiting for a just-issued GPU calculation. A very slow GPU can still make this
+read wait for completion.
+Exploration is sampled once per simulated second, as in the CPU engine.
+The GPU uses a parallel 64-bit occupation fingerprint for cycle detection;
+this is separate from the unchanged journal checksum. Observation budgets,
+extinction detection and the inactivity heuristic remain shared.
+
+## What “cheap” means here
+
+A GPU can make much finer grids practical, but lower CPU use does not establish
+lower electricity consumption. Driver/context memory also adds overhead.
+A dedicated GPU that would otherwise sleep can cost more to keep awake. Keep
+15 fps, retain the hidden-window pause, and compare on your own machine.
+This version does not change GPU selection, driver power settings or screen
+blanking. A driver can select a dedicated GPU even on a laptop with an iGPU.
+
+The [benchmark notes](../bench/GPU.md) distinguish hardware measurements from
+software OpenGL checks and document the tested grids and limitations.

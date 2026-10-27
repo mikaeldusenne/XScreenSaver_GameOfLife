@@ -101,6 +101,12 @@ scene_reset(struct scene *scene, const struct life *life,
 bool
 scene_finished(struct scene *scene, const struct life *life)
 {
+    return scene_observe(scene, life, -1);
+}
+
+bool
+scene_observe(struct scene *scene, const struct life *life, int fresh)
+{
     bool repeated = false;
     unsigned count = scene->generation < SCENE_HISTORY ? scene->generation : SCENE_HISTORY;
     for (unsigned i = 0; i < count; ++i)
@@ -117,18 +123,20 @@ scene_finished(struct scene *scene, const struct life *life)
     /* Once per second, detect exploration and low activity. This ignores
      * trails and needs no extra work in the per-cell simulation loop. */
     if (scene->generation % scene->fps == 0) {
-        unsigned fresh = 0;
-        for (int y = 1; y <= life->rows; ++y)
-            for (int x = 1; x <= life->columns; ++x) {
-                int i = y * life->stride + x;
-                if (life->cells[i] >= LIFE_ALIVE && !scene->visited[i]) {
-                    scene->visited[i] = 1;
-                    ++fresh;
+        if (fresh < 0) {
+            fresh = 0;
+            for (int y = 1; y <= life->rows; ++y)
+                for (int x = 1; x <= life->columns; ++x) {
+                    int i = y * life->stride + x;
+                    if (life->cells[i] >= LIFE_ALIVE && !scene->visited[i]) {
+                        scene->visited[i] = 1;
+                        ++fresh;
+                    }
                 }
-            }
+        }
         unsigned tolerance = (unsigned)max(2, (int)life->population / 100);
         unsigned low_activity = (unsigned)max(8, life->columns * life->rows / 100);
-        bool quiet = fresh <= tolerance && scene->changes / scene->fps <= low_activity;
+        bool quiet = (unsigned)fresh <= tolerance && scene->changes / scene->fps <= low_activity;
         scene->stale = quiet ? scene->stale + 1 : 0;
         scene->changes = 0;
     }

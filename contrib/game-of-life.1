@@ -44,6 +44,15 @@ Report the available display, fonts, wallpaper and idle capabilities.
 .SH OPTIONS
 Options are passed to game_of_life and may follow a command.
 .TP
+.B \-\-gpu
+Compute and draw on OpenGL 4.3 through GLX. Requires a build with libepoxy.
+Use doctor --gpu to identify the renderer; llvmpipe/softpipe are software GL.
+An unavailable GPU engine reports an error; use --cpu to return to Xlib.
+The automatic grid budget stays the same. --size 1 selects a finer world.
+.TP
+.B \-\-cpu
+Use the original CPU/Xlib engine. This is the default, also in GPU builds.
+.TP
 .BI \-\-fps " N"
 Maximum frame rate, 1 to 60; default 15.
 .TP

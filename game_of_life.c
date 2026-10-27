@@ -15,6 +15,7 @@
 #include "figures.h"
 #include "scene.h"
 #include "journal.h"
+#include "gpu.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -50,7 +51,7 @@ struct options {
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
-    bool root, fullscreen, wallpaper, doctor, english, replay, no_history;
+    bool root, fullscreen, wallpaper, doctor, english, replay, no_history, gpu;
 };
 
 struct app {
@@ -65,6 +66,8 @@ struct app {
     XRectangle rectangles[LIFE_COLORS][BATCH];
     int counts[LIFE_COLORS];
     struct life life;
+    struct gpu *gpu;
+    float rgb[LIFE_COLORS][3];
     struct options options;
     int width, height, size, left, top;
     unsigned fading;
@@ -77,7 +80,7 @@ struct app {
     bool journaling;
     unsigned history_count, history_index;
     double idle_check, idle_after;
-    bool own_window, visible, redraw, presenting;
+    bool own_window, visible, redraw, presenting, gpu_pending;
 };
 
 static volatile sig_atomic_t stopping;
@@ -159,6 +162,8 @@ options(int argc, char **argv)
                  "  --find TEXT         Filter figures by name or family and exit\n"
                  "  --doctor            Check this display and report supported features\n"
                  "  --version           Print version and build features\n"
+                 "  --gpu               Compute and draw with OpenGL 4.3 (optional)\n"
+                 "  --cpu               Use the original CPU/Xlib engine (default)\n"
                  "  --lang en|fr        Caption language (default: system locale)\n"
                  "  --wallpaper        Animate behind applications (default: alternate)\n"
                  "  --idle N           With --wallpaper, show above apps after N idle seconds\n"
@@ -181,8 +186,8 @@ options(int argc, char **argv)
             exit(EXIT_SUCCESS);
         }
         if (!strcmp(arg, "-version")) {
-            printf("Game of Life %s (X11; idle detection: %s; %zu figures)\n",
-                   LIFE_VERSION, LIFE_HAVE_XSS ? "yes" : "no", figure_count);
+            printf("Game of Life %s (X11; idle detection: %s; GPU build: %s; %zu figures)\n",
+                   LIFE_VERSION, LIFE_HAVE_XSS ? "yes" : "no", LIFE_HAVE_GPU ? "yes" : "no", figure_count);
             exit(EXIT_SUCCESS);
         }
         if (!strcmp(arg, "-find")) {
@@ -208,6 +213,10 @@ options(int argc, char **argv)
         }
         if (!strcmp(arg, "-doctor")) {
             opt.doctor = true;
+        } else if (!strcmp(arg, "-gpu")) {
+            opt.gpu = true;
+        } else if (!strcmp(arg, "-cpu")) {
+            opt.gpu = false;
         } else if (!strcmp(arg, "-no-history")) {
             opt.no_history = true;
         } else if (!strcmp(arg, "-root")) {
@@ -315,9 +324,19 @@ doctor(const struct options *opt)
            desktop ? "X11 session; desktop-dependent" : "unavailable in this session; use preview",
            desktop && idle ? "ready" : "unavailable; use preview or an external screensaver");
     bool fonts_available = font != NULL;
+    printf("Engine: CPU by default; GPU support %s\n", LIFE_HAVE_GPU ? "built (probe with --doctor --gpu)" : "not built");
+    bool gpu_available = true;
+    if (opt->gpu) {
+        Window window = XCreateSimpleWindow(display, DefaultRootWindow(display), 0, 0, 16, 16, 0, 0, 0);
+        struct gpu *gpu = gpu_open(display, window);
+        gpu_available = gpu != NULL;
+        printf("OpenGL: %s\n", gpu ? gpu_renderer(gpu) : gpu_error());
+        gpu_close(gpu);
+        XDestroyWindow(display, window);
+    }
     if (font) XFreeFont(display, font);
     XCloseDisplay(display);
-    return fonts_available ? EXIT_SUCCESS : EXIT_FAILURE;
+    return fonts_available && gpu_available ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static double
@@ -358,6 +377,9 @@ palette(struct app *app)
         if (!XAllocColor(app->display, app->colormap, &color))
             fail("cannot allocate palette in this window's colormap");
         app->colors[app->allocated_colors++] = color.pixel;
+        app->rgb[i][0] = color.red / 65535.0f;
+        app->rgb[i][1] = color.green / 65535.0f;
+        app->rgb[i][2] = color.blue / 65535.0f;
     }
 }
 
@@ -449,7 +471,10 @@ seed(struct app *app)
     if (!scene_reset(&app->timing, &app->life, figure,
                      (unsigned)app->options.fps, (unsigned)app->options.seconds))
         fail("cannot allocate scene history");
+    if (app->gpu && !gpu_seed(app->gpu, &app->life, app->timing.visited))
+        fail(gpu_error());
     app->fading = 0;
+    app->gpu_pending = false;
     app->redraw = true;
 }
 
@@ -489,8 +514,63 @@ flush_color(struct app *app, int color)
 }
 
 static void
+caption(struct app *app, Drawable drawable, GC gc, int height, unsigned long color)
+{
+    /* The footer lies outside the grid, so its static label needs drawing
+     * only after an expose, a resize or a scene change. Core fonts are Latin-1. */
+    char label[128];
+    if (app->scene == MODE_FIGURE)
+        snprintf(label, sizeof(label), app->options.english ? "Figure: %s" : "Mode : une figure - %s",
+                 app->figure->name);
+    else
+        snprintf(label, sizeof(label), "%s", app->options.english
+                 ? (app->scene == MODE_RANDOM ? "Mode: random" : "Mode: random figures")
+                 : (app->scene == MODE_RANDOM ? "Mode : al\351atoire" : "Mode : figures al\351atoires"));
+    int length = (int)strlen(label);
+    while (length && XTextWidth(app->font, label, length) > app->width - 16) --length;
+    XSetForeground(app->display, gc, color);
+    XDrawString(app->display, drawable, gc,
+                app->width - 8 - XTextWidth(app->font, label, length),
+                height - 8 - app->font->descent, label, length);
+    if (app->own_window) {
+        const char *hint = app->options.english
+            ? (app->presenting ? "Left click = next ; right click = previous ; any key = desktop"
+                               : "Left click = next ; right click = previous")
+            : (app->presenting ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
+                               : "Clic gauche = suivant ; clic droit = pr\351c\351dent");
+        int hint_length = (int)strlen(hint);
+        if (XTextWidth(app->font, hint, hint_length) +
+            XTextWidth(app->font, label, length) + 40 <= app->width)
+            XDrawString(app->display, drawable, gc, 8,
+                        height - 8 - app->font->descent, hint, hint_length);
+    }
+}
+
+static void
 draw(struct app *app)
 {
+    if (app->gpu) {
+        int footer = app->font->ascent + app->font->descent + 16;
+        if (app->width < 40 || app->height <= footer + 16) footer = 0;
+        if (app->redraw) {
+            int height = footer ? footer : 1;
+            Pixmap bitmap = XCreatePixmap(app->display, app->window, (unsigned)app->width, (unsigned)height, 1);
+            GC gc = XCreateGC(app->display, bitmap, 0, NULL);
+            XSetForeground(app->display, gc, 0);
+            XFillRectangle(app->display, bitmap, gc, 0, 0, (unsigned)app->width, (unsigned)height);
+            XSetFont(app->display, gc, app->font->fid);
+            if (footer) caption(app, bitmap, gc, height, 1);
+            bool ok = gpu_caption(app->gpu, bitmap, app->width, height);
+            XFreeGC(app->display, gc);
+            XFreePixmap(app->display, bitmap);
+            if (!ok) fail(gpu_error());
+        }
+        gpu_draw(app->gpu, app->width, app->height, app->height - footer,
+                 app->size, app->left, app->top);
+        app->redraw = false;
+        XFlush(app->display);
+        return;
+    }
     if (app->redraw) {
         XSetForeground(app->display, app->gc, app->colors[0]);
         XFillRectangle(app->display, app->window, app->gc, 0, 0,
@@ -535,36 +615,8 @@ draw(struct app *app)
     for (int i = 0; i < LIFE_COLORS; ++i) flush_color(app, i);
     if (clipped) XSetClipMask(app->display, app->gc, None);
     if (app->redraw && app->width >= 40 &&
-        app->height > app->font->ascent + app->font->descent + 32) {
-        /* The footer lies outside the grid, so its static label needs drawing
-         * only after an expose, a resize or a scene change. Core fonts are Latin-1. */
-        char label[128];
-        if (app->scene == MODE_FIGURE)
-            snprintf(label, sizeof(label), app->options.english ? "Figure: %s" : "Mode : une figure - %s",
-                     app->figure->name);
-        else
-            snprintf(label, sizeof(label), "%s", app->options.english
-                     ? (app->scene == MODE_RANDOM ? "Mode: random" : "Mode: random figures")
-                     : (app->scene == MODE_RANDOM ? "Mode : al\351atoire" : "Mode : figures al\351atoires"));
-        int length = (int)strlen(label);
-        while (length && XTextWidth(app->font, label, length) > app->width - 16) --length;
-        XSetForeground(app->display, app->gc, app->colors[LIFE_ALIVE + 13]);
-        XDrawString(app->display, app->window, app->gc,
-                    app->width - 8 - XTextWidth(app->font, label, length),
-                    app->height - 8 - app->font->descent, label, length);
-        if (app->own_window) {
-            const char *hint = app->options.english
-                ? (app->presenting ? "Left click = next ; right click = previous ; any key = desktop"
-                                   : "Left click = next ; right click = previous")
-                : (app->presenting ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
-                                   : "Clic gauche = suivant ; clic droit = pr\351c\351dent");
-            int hint_length = (int)strlen(hint);
-            if (XTextWidth(app->font, hint, hint_length) +
-                XTextWidth(app->font, label, length) + 40 <= app->width)
-                XDrawString(app->display, app->window, app->gc, 8,
-                            app->height - 8 - app->font->descent, hint, hint_length);
-        }
-    }
+        app->height > app->font->ascent + app->font->descent + 32)
+        caption(app, app->window, app->gc, app->height, app->colors[LIFE_ALIVE + 13]);
     app->redraw = false;
     XFlush(app->display);
 }
@@ -572,13 +624,31 @@ draw(struct app *app)
 static void
 advance(struct app *app)
 {
+    if (app->gpu) {
+        /* Observe the last displayed generation before computing the next.
+         * This preserves the fade boundary without waiting immediately after
+         * dispatch; the regular frame-rate sleep gives the GPU time to finish. */
+        if (app->gpu_pending) {
+            struct gpu_stats stats;
+            if (!gpu_observe(app->gpu, &stats)) fail(gpu_error());
+            app->life.population = stats.population;
+            app->life.changes = stats.changes;
+            app->life.hash = stats.hash;
+            if (scene_observe(&app->timing, &app->life, (int)stats.fresh) && !app->fading)
+                app->fading = (unsigned)app->options.trail + 2;
+        }
+        bool sample = !app->fading && (app->timing.generation + 1) % app->timing.fps == 0;
+        if (!gpu_step(app->gpu, (unsigned)app->options.trail, app->fading != 0, sample))
+            fail(gpu_error());
+        app->gpu_pending = !app->fading;
+    } else {
+        life_step(&app->life, (unsigned)app->options.trail, app->fading != 0);
+    }
     if (app->fading) {
-        life_step(&app->life, (unsigned)app->options.trail, true);
         if (--app->fading == 0) navigate(app, 1);
         return;
     }
-    life_step(&app->life, (unsigned)app->options.trail, false);
-    if (scene_finished(&app->timing, &app->life))
+    if (!app->gpu && scene_finished(&app->timing, &app->life))
         app->fading = (unsigned)app->options.trail + 2;
 }
 
@@ -652,6 +722,11 @@ open_window(struct app *app)
     app->visible = attributes.map_state == IsViewable;
     app->colormap = attributes.colormap;
     palette(app);
+    if (app->options.gpu) {
+        app->gpu = gpu_open(display, app->window);
+        if (!app->gpu) fail(gpu_error());
+        gpu_palette(app->gpu, &app->rgb[0][0]);
+    }
     app->gc = XCreateGC(display, app->window, 0, NULL);
     XSetGraphicsExposures(display, app->gc, False);
     app->font = XLoadQueryFont(display, "6x10");
@@ -807,6 +882,7 @@ main(int argc, char **argv)
         if (ready < 0 && errno != EINTR) fail("poll failed");
         if (ready > 0 && (fd.revents & (POLLERR | POLLHUP | POLLNVAL))) break;
     }
+    gpu_close(app.gpu);
     scene_free(&app.timing);
     life_free(&app.life);
     free(app.journal_path);

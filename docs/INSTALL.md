@@ -3,7 +3,9 @@
 [Overview](../README.md) · [Using it](USAGE.md) · [Français](README.fr.md)
 
 One C99 renderer, Xlib, and an optional libXss dependency for idle detection.
-No GPU API, network service, downloaded pattern pack or Python runtime is needed.
+The default CPU engine needs no GPU API. The optional `--gpu` engine uses
+libepoxy and an OpenGL 4.3/GLX driver. No network service, downloaded pattern
+pack or Python runtime is needed. [GPU requirements and setup](GPU.md).
 
 ## Where it runs
 
@@ -158,6 +160,11 @@ Use `-DLIFE_WITH_XSS=OFF` to omit it explicitly. `game-of-life version` reports
 the feature. To run the existing simulation checks, configure with
 `-DBUILD_TESTING=ON`, build, then run `ctest --test-dir build --output-on-failure`.
 The checks remain enabled even in a Release build.
+
+libepoxy is also detected automatically. Without it, the CPU engine builds as
+before. Use `-DLIFE_WITH_GPU=OFF` for a build without OpenGL dependencies, or
+`make WITH_GPU=0` with GNU Make. Compiling GPU support does not enable it at
+runtime: the default stays CPU, and `--gpu` explicitly selects OpenGL.
 
 The original GNU Make route remains available: `make`, `make check`,
 `make install PREFIX="$HOME/.local"`. It installs **only the renderer**.
