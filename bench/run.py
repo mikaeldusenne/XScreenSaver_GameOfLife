@@ -66,7 +66,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
     env.pop('XSCREENSAVER_WINDOW', None)
     command = [str(binary), '-fullscreen' if args.desktop else '-root',
                '-size', str(size), '-fps', str(args.fps), '-seed', str(args.seed),
-               '-seconds', '3600', '--history', str(history)]
+               '-seconds', '3600', '--mode', getattr(args, 'mode', 'random'),
+               '--history', str(history)]
     # On the real desktop this includes other clients' Xorg/compositor activity.
     initial = sum(cpu_seconds(pid) for pid in servers)
     initial_time = time.monotonic()
@@ -133,7 +134,7 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
         result = dict(backend='desktop' if args.desktop else 'Xvfb',
                       width=width, height=height, size=size, actual_size=actual_size,
                       columns=columns, rows=rows, cells=columns * rows, footer_px=footer,
-                      target_fps=args.fps, seed=args.seed, warmup_s=args.warmup,
+                      mode=recipe[2], target_fps=args.fps, seed=args.seed, warmup_s=args.warmup,
                       elapsed_s=end - start, client_cpu=client, graphics_cpu=server,
                       graphics_baseline_cpu=baseline, total_cpu=client + server,
                       rss_kib=memory, fps=None if args.no_frame_probe else len(frames) / (end - start),
@@ -159,6 +160,8 @@ def main():
     parser.add_argument('--baseline', type=float, default=1)
     parser.add_argument('--fps', type=int, default=15)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--mode', choices=('random', 'random-figures'), default='random',
+                        help='Random cells or a sparse mix of library figures')
     parser.add_argument('--footer-height', type=int, default=26,
                         help='Caption footer pixels; default 26 for the 6x10 font')
     parser.add_argument('--no-frame-probe', action='store_true', help='Measure the shipped binary without the XSync/frame counter')

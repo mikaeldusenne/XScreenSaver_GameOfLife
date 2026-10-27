@@ -59,8 +59,8 @@ No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-
 - **Time to see it.** Still lifes, oscillators, producers and explosions get
   different observation budgets. Settled random worlds give way to fresh ones.
 - **Quiet when hidden.** A fully covered wallpaper pauses. Rendering batches
-  only changed cells, at 15 fps. Random worlds now have a budget of 256,000
-  cells: about four times the previous definition in Full HD.
+  only changed cells, at 15 fps. Random worlds and figure mixes have a budget of
+  256,000 cells: about four times the previous definition in Full HD.
 - **One small executable.** Around 260 KB on the development machine, including
   all 810 figures. No network access, 3D engine or runtime asset downloads.
 

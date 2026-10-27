@@ -1,0 +1,169 @@
+{
+  "version": "0.4.1",
+  "cpu": "Intel Core i7-8750H",
+  "compiler": "cc (GCC) 16.2.1 20260810",
+  "flags": "-O3 -std=c99 -DXFlush=bench_flush",
+  "frame_probe": "XSync after XFlush; bench/frames.c",
+  "scene_seconds": 3600,
+  "source_sha256": {
+    "game_of_life.c": "4e9d6f60785c3b3a705d4e2fa0f9ca58aa473d54733eb70041e1085c15269891",
+    "life.c": "ea482921149e7828458eae2232687aa4fe501359558ca7ae7b79462e8e57ad35",
+    "life.h": "a64b03153ea7ef56d7e22994abdf558e34398ae6c28cf35dcfcd1ca528e90d8a",
+    "figures.c": "c3bb5fa3711e77ab5586aaf129d48ad73c7431ee8302490dce32e3c7c73ec183",
+    "figures_data.inc": "8611760dcd2fd27e232af447179a4b3438fb753a8c114c482642e246adebd402",
+    "scene.c": "8bb644ab9199dfce301477292ef74a254b79203915123ac4bd5a9b79374971f7",
+    "journal.c": "fc31197fec16a449ab8dec4d672de683b329cc2fb2ab03c0697dea7fef9a2cce",
+    "bench/run.py": "3818cfbb1ad53e1ef37fbe3074a69e946a9bf705a1fa15541e6486f702e1864c",
+    "bench/frames.c": "a1026da927df331b03df0eaed0c0bfc94c5f0b08730b95f0c7c567b01bd354be"
+  },
+  "binary_sha256": "ffbc15583480bd5592b457333a0d5c3e9ee1cef75bd5b56a0529d5bb9e09b8e3",
+  "results": [
+    {
+      "backend": "Xvfb",
+      "width": 1920,
+      "height": 1080,
+      "size": 0,
+      "actual_size": 3,
+      "columns": 640,
+      "rows": 351,
+      "cells": 224640,
+      "footer_px": 26,
+      "mode": "mix",
+      "target_fps": 15,
+      "seed": 42,
+      "warmup_s": 0.1,
+      "elapsed_s": 90.00130714899569,
+      "client_cpu": 3.2888411221625575,
+      "graphics_cpu": 3.2888411221625575,
+      "graphics_baseline_cpu": 0.0,
+      "total_cpu": 6.577682244325115,
+      "rss_kib": 4628,
+      "fps": 13.97757476919087,
+      "p95_frame_ms": 72.63315599993803,
+      "phases": [
+        {
+          "start_s": 0.10187848599161953,
+          "end_s": 15.10200718199485,
+          "client_cpu": 3.1999725450882,
+          "graphics_cpu": 3.1333064503988624,
+          "total_cpu": 6.3332789954870625,
+          "fps": 13.999879884760874
+        },
+        {
+          "start_s": 15.10200718199485,
+          "end_s": 45.10232322399679,
+          "client_cpu": 3.1666333070290076,
+          "graphics_cpu": 3.1666333070290076,
+          "total_cpu": 6.333266614058015,
+          "fps": 13.99985251528614
+        },
+        {
+          "start_s": 45.10232322399679,
+          "end_s": 90.10318563498731,
+          "client_cpu": 3.39993484130724,
+          "graphics_cpu": 3.422156637655653,
+          "total_cpu": 6.822091478962893,
+          "fps": 13.955288106803573
+        }
+      ]
+    },
+    {
+      "backend": "Xvfb",
+      "width": 1920,
+      "height": 1080,
+      "size": 0,
+      "actual_size": 3,
+      "columns": 640,
+      "rows": 351,
+      "cells": 224640,
+      "footer_px": 26,
+      "mode": "mix",
+      "target_fps": 15,
+      "seed": 2026,
+      "warmup_s": 0.1,
+      "elapsed_s": 90.00162931300292,
+      "client_cpu": 2.5777311118797925,
+      "graphics_cpu": 1.7888565043648563,
+      "graphics_baseline_cpu": 0.0,
+      "total_cpu": 4.366587616244649,
+      "rss_kib": 4632,
+      "fps": 14.221964755198858,
+      "p95_frame_ms": 71.11713199992664,
+      "phases": [
+        {
+          "start_s": 0.10183293599402532,
+          "end_s": 15.10224644599657,
+          "client_cpu": 2.5999283269087283,
+          "graphics_cpu": 1.9332800379577726,
+          "total_cpu": 4.533208364866501,
+          "fps": 14.199608554655361
+        },
+        {
+          "start_s": 15.10224644599657,
+          "end_s": 45.10310487099923,
+          "client_cpu": 2.5665932257401116,
+          "graphics_cpu": 1.8332808755286518,
+          "total_cpu": 4.399874101268764,
+          "fps": 14.232926070013349
+        },
+        {
+          "start_s": 45.10310487099923,
+          "end_s": 90.10346224899695,
+          "client_cpu": 2.5777573059167866,
+          "graphics_cpu": 1.7110975220309703,
+          "total_cpu": 4.288854827947757,
+          "fps": 14.222109274023651
+        }
+      ]
+    },
+    {
+      "backend": "Xvfb",
+      "width": 3840,
+      "height": 2160,
+      "size": 0,
+      "actual_size": 6,
+      "columns": 640,
+      "rows": 355,
+      "cells": 227200,
+      "footer_px": 26,
+      "mode": "mix",
+      "target_fps": 15,
+      "seed": 42,
+      "warmup_s": 0.1,
+      "elapsed_s": 90.00156878700363,
+      "client_cpu": 3.0999459649450913,
+      "graphics_cpu": 3.7777119286069216,
+      "graphics_baseline_cpu": 0.0,
+      "total_cpu": 6.877657893552013,
+      "rss_kib": 4608,
+      "fps": 13.921979548660213,
+      "p95_frame_ms": 73.23409500531852,
+      "phases": [
+        {
+          "start_s": 0.10191148299782071,
+          "end_s": 15.10201625400805,
+          "client_cpu": 3.2666438500282515,
+          "graphics_cpu": 4.599967870447946,
+          "total_cpu": 7.866611720476198,
+          "fps": 13.799903611343838
+        },
+        {
+          "start_s": 15.10201625400805,
+          "end_s": 45.102620289006154,
+          "client_cpu": 3.133270246503753,
+          "graphics_cpu": 3.9332541392281155,
+          "total_cpu": 7.066524385731869,
+          "fps": 13.933052798282647
+        },
+        {
+          "start_s": 45.102620289006154,
+          "end_s": 90.10348027000146,
+          "client_cpu": 3.022164466577646,
+          "graphics_cpu": 3.3999350248998517,
+          "total_cpu": 6.422099491477498,
+          "fps": 13.955288860373248
+        }
+      ]
+    }
+  ]
+}

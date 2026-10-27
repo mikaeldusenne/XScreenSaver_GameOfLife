@@ -392,9 +392,9 @@ seed(struct app *app)
     int footer = app->font->ascent + app->font->descent + 16;
     if (height > footer + 16 && width >= 40) height -= footer;
     const struct figure *figure = app->scene == MODE_FIGURE ? app->figure : NULL;
-    int size = app->scene == MODE_RANDOM
-        ? scene_random_cell_size(width, height, app->options.size)
-        : scene_cell_size(width, height, app->options.size, figure);
+    int size = app->scene == MODE_FIGURE
+        ? scene_cell_size(width, height, app->options.size, figure)
+        : scene_random_cell_size(width, height, app->options.size);
     int columns = width / size, rows = height / size;
     if (!columns) columns = 1;
     if (!rows) rows = 1;

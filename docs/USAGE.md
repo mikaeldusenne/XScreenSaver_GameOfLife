@@ -138,11 +138,16 @@ and expansive seeds.
 
 ## Tune without fuss
 
-Random worlds use an automatic budget of 256,000 cells, with cells at least two
-pixels wide. At 1920 × 1080 that means 3-pixel cells, roughly 640 × 350 rather
-than the previous 320 × 175 (the exact height depends on the caption font).
-The random scenes in alternation use this finer grid too. Figure mixes retain
-their 64,000-cell budget; single figures retain their breathing-room zoom.
+Random worlds and figure mixes use an automatic budget of 256,000 cells, with
+cells at least two pixels wide. At 1920 × 1080 that means 3-pixel cells, roughly
+640 × 350 rather than the previous 320 × 175 (the exact height depends on the
+caption font). Both scenes use this finer grid in alternation too; single
+figures retain their breathing-room zoom.
+
+Mixes stay sparse: at most 128 figures, six empty cells separating figures,
+and at most 5% initially live cells on a normal-sized grid.
+The larger world leaves more room for their evolution. Existing history
+entries replay at their recorded dimensions.
 
 The beginning of a random world does more work: many cells and colored trails
 change at once. CPU use falls as it settles. The simulation still runs every

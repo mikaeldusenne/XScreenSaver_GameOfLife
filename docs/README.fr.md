@@ -221,11 +221,15 @@ Wayland. `make uninstall` retire le binaire installé. `PREFIX`, `BINDIR` et
 - **15 images/s**, avec attente bloquante entre les images et aucune rafale de
   rattrapage. La simulation s’arrête quand la fenêtre est entièrement masquée
   ou démappée.
-- **Budget de 256 000 cellules pour les mondes aléatoires**, grâce au moteur
-  optimisé de la version 0.4. En Full HD, environ 640 × 350 cellules de 3 pixels
-  remplacent les 320 × 175 cellules de 6 pixels : quatre fois plus de cellules.
-  La hauteur exacte dépend de la police de légende. Les mélanges de figures
-  gardent leur budget de 64 000 cellules, les figures seules leur zoom adapté.
+- **Budget de 256 000 cellules pour les mondes aléatoires et les mélanges de
+  figures**, grâce au moteur optimisé de la version 0.4. En Full HD, environ
+  640 × 350 cellules de 3 pixels remplacent les 320 × 175 cellules de 6 pixels :
+  quatre fois plus de cellules.
+  La hauteur exacte dépend de la police de légende. Cela s’applique aussi dans
+  l’alternance ; les figures seules gardent leur zoom adapté. Les mélanges
+  restent aérés : au plus 128 figures, six cellules vides entre les figures,
+  et au plus 5 % de cellules vivantes au départ sur une grille de taille
+  normale. Les anciens historiques gardent leurs dimensions.
   `-size 6` retrouve l’ancienne densité en Full HD.
 - **Deux grilles d’un octet par cellule** : état, âge et trace sont encodés ensemble.
   Une troisième marque les emplacements déjà explorés, une fois par seconde.
