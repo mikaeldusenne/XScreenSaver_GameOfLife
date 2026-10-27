@@ -34,6 +34,11 @@ Draw underneath applications in an X11 desktop.
 .B screensaver
 Wallpaper plus an interactive screensaver after 120 idle seconds.
 .TP
+.BI replay " [N]"
+Replay physical line N of the journal, or its last complete line when N is 0
+or omitted. Preserves the recorded grid; a larger world is clipped to the view.
+Does not append. Requires a compatible generator and figure library.
+.TP
 .B doctor
 Report the available display, fonts, wallpaper and idle capabilities.
 .SH OPTIONS
@@ -65,6 +70,17 @@ Fullscreen preview. Any key exits; mouse clicks navigate.
 .BI \-\-seed " N"
 Reproduce the initial world at identical dimensions.
 .TP
+.BI \-\-history " FILE"
+Append initial-world recipes to FILE. With replay, read FILE instead.
+Wallpaper logs automatically to the default journal; previews are opt-in.
+.TP
+.B \-\-no-history
+Disable history writes. No per-frame states are ever recorded.
+.TP
+.BI \-\-replay " N"
+Read line N (0 means last complete line). Recorded dimensions, seed and trail
+override size, seed and trail options. Frame rate remains adjustable.
+.TP
 .BI \-\-display " DISPLAY"
 Select an X server.
 .TP
@@ -88,6 +104,12 @@ may cover a wallpaper window. macOS with XQuartz, Wayland with Xwayland and
 Windows with WSLg can run the windowed preview; they do not gain native
 wallpaper, idle detection or session locking through this program.
 .SH FILES
+The default journal is $XDG_STATE_HOME/game-of-life/history.tsv, falling back to
+~/.local/state/game-of-life/history.tsv. Each tab-separated line stores a
+versioned recipe and checksum, usually 60 to 90 bytes. No automatic rotation.
+New files are private (0600); write failures disable logging without stopping
+animation. Recipes need a compatible generator/library, not just the file.
+.PP
 No user configuration is required. No networking is performed. Patterns are
 compiled into the executable. Installing does not enable autostart or change
 screen power settings. The idle saver is not a session lock.

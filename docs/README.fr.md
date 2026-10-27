@@ -41,6 +41,33 @@ make
 ./game_of_life -help
 ```
 
+## Garder et retrouver un monde
+
+Le fond d’écran et son mode inactivité enregistrent automatiquement une ligne
+par état initial dans `~/.local/state/game-of-life/history.tsv`, ou sous
+`$XDG_STATE_HOME` si défini. L’aperçu n’écrit rien sans `--history FICHIER`.
+
+```sh
+game-of-life replay                      # Dernière ligne complète
+game-of-life replay 42                   # Rejouer la ligne 42
+game-of-life random --history ~/life.tsv # Journal explicite pour un aperçu
+game-of-life replay 1 --history ~/life.tsv
+game-of-life screensaver --no-history    # Désactiver l’enregistrement
+```
+
+Une ligne fait généralement **60 à 90 octets**, même pour une grille de plusieurs
+millions de cellules : version, date, mode, dimensions, graine, traces, nom de
+figure et empreinte de vérification. Aucun enregistrement à chaque image.
+La relecture conserve exactement la grille initiale, indépendamment de la taille
+de la fenêtre ; si elle ne tient pas à un pixel par cellule, la vue est recadrée.
+Revenir en arrière n’ajoute pas de doublon aux mêmes dimensions.
+
+C’est une recette déterministe : conserver une version compatible du programme
+et de sa bibliothèque pour les archives durables. Une empreinte différente fait
+refuser la relecture, au lieu de montrer silencieusement un autre monde.
+Le fichier reste un texte ordinaire, sans rotation ni effacement automatique.
+[Format et détails](USAGE.md#keep-a-world).
+
 ## Choisir un mode
 
 ```sh

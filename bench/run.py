@@ -155,6 +155,7 @@ def main():
             subprocess.run(['cc', '-O2', '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
                             '-DXFlush=bench_flush', str(ROOT / 'game_of_life.c'),
                             str(ROOT / 'life.c'), str(ROOT / 'figures.c'), str(ROOT / 'scene.c'),
+                            str(ROOT / 'journal.c'),
                             str(ROOT / 'bench/frames.c'),
                             '-lX11', '-lXss', '-o', str(binary)], check=True)
         for index, case in enumerate(args.cases.split(',')):

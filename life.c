@@ -76,18 +76,22 @@ life_step(struct life *life, unsigned trail, bool fade)
     uint64_t hash = LIFE_EMPTY_HASH;
     unsigned population = 0, changes = 0;
     for (int y = 1; y <= rows; ++y) {
+        /* Reuse vertical sums as the three-column window slides right. */
+        int first = y * stride;
+        unsigned left = (a[first - stride] >= LIFE_ALIVE) +
+            (a[first] >= LIFE_ALIVE) + (a[first + stride] >= LIFE_ALIVE);
+        unsigned middle = (a[first - stride + 1] >= LIFE_ALIVE) +
+            (a[first + 1] >= LIFE_ALIVE) + (a[first + stride + 1] >= LIFE_ALIVE);
         for (int x = 1; x <= columns; ++x) {
             int i = y * stride + x;
             uint8_t value = a[i];
             bool alive = value >= LIFE_ALIVE;
-            unsigned neighbors =
-                (a[i - stride - 1] >= LIFE_ALIVE) +
-                (a[i - stride] >= LIFE_ALIVE) +
-                (a[i - stride + 1] >= LIFE_ALIVE) +
-                (a[i - 1] >= LIFE_ALIVE) + (a[i + 1] >= LIFE_ALIVE) +
-                (a[i + stride - 1] >= LIFE_ALIVE) +
-                (a[i + stride] >= LIFE_ALIVE) +
+            unsigned right = (a[i - stride + 1] >= LIFE_ALIVE) +
+                (a[i + 1] >= LIFE_ALIVE) +
                 (a[i + stride + 1] >= LIFE_ALIVE);
+            unsigned neighbors = left + middle + right - alive;
+            left = middle;
+            middle = right;
             if (!fade && (neighbors == 3 || (alive && neighbors == 2))) {
                 ++population;
                 changes += !alive;

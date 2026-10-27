@@ -19,7 +19,7 @@ if(LIFE_WITH_XSS AND NOT X11_Xss_FOUND)
   message(STATUS "libXss not found: preview, wallpaper and XScreenSaver integration remain available; --idle needs libXss")
 endif()
 
-add_library(life_core STATIC life.c figures.c scene.c)
+add_library(life_core STATIC life.c figures.c scene.c journal.c)
 target_include_directories(life_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(game_of_life game_of_life.c)
 target_link_libraries(game_of_life PRIVATE life_core X11::X11)
@@ -64,7 +64,9 @@ install(FILES contrib/game-of-life.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 install(FILES README.md LICENSE FIGURES.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs)
 install(DIRECTORY ci/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/ci)
-install(FILES bench/README.md bench/results.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
+install(FILES bench/README.md bench/results.png bench/PERFORMANCE.md
+        bench/compute-2026-10-27.json bench/render-2026-10-27.json
+        DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
 install(FILES img/preview.png img/figure-pulsar.png img/figure-koks-galaxy.png
         img/figure-bunnies.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)
 install(FILES contrib/game-of-life.svg DESTINATION ${CMAKE_INSTALL_DOCDIR}/contrib)

@@ -45,6 +45,65 @@ In fullscreen preview, any key exits. The caption shows the current mode and
 figure; controls sit in the opposite corner when there is enough room.
 Use `--lang fr` or `--lang en` to choose the caption language explicitly.
 
+## Keep a world
+
+Wallpaper and idle-saver modes automatically append initial-world recipes to
+`$XDG_STATE_HOME/game-of-life/history.tsv`, falling back to
+`~/.local/state/game-of-life/history.tsv`. Previews do not write a journal unless
+you request one. A line is typically 60–90 bytes, independent of grid area.
+
+```sh
+game-of-life replay                     # Last complete line (same as replay 0)
+game-of-life replay 42                  # Physical line 42, counting from 1
+game-of-life random --history ~/life.tsv
+game-of-life replay 1 --history ~/life.tsv
+game-of-life screensaver --no-history
+nl -ba ~/.local/state/game-of-life/history.tsv | tail
+```
+
+Replay keeps the recorded dimensions, seed and trail length. It fits the world
+to the window with whole-pixel cells; a world larger than the window at one
+pixel per cell is centered and clipped, never resized logically. `--size`,
+`--seed` and `--trail` do not override a recording. You can change playback speed
+with `--fps`. A replay keeps restarting the selected world and never appends to
+the journal. Copy a favorite line into another file to keep or share it.
+
+New scenes are appended once. Back/forward navigation at unchanged dimensions
+does not write again; resizing a live scene to a different grid records that new
+initial world. Exposes and simulation steps do not write. Existing journals are
+never truncated or automatically rotated. New files are private (0600), new
+directories are 0700; existing permissions are preserved. A write failure emits
+one warning and disables logging for that process without stopping animation.
+An interrupted final line is ignored by `replay 0`. Writes are not forced to disk
+with `fsync`, so the very latest entry is not guaranteed across a power failure.
+
+### A recipe, one tab-separated line
+
+There is no header. Each line contains these nine fields:
+
+| Field | Meaning |
+| --- | --- |
+| `life1` | Version of the reconstruction recipe |
+| timestamp | Unix seconds when the initial world was recorded |
+| mode | `random`, `figure`, or `mix` |
+| columns, rows | Exact toroidal grid dimensions (two fields) |
+| seed | Eight hexadecimal digits, before generating the world |
+| trail | Trail length, 0–31 |
+| figure | Canonical figure name, or `-` |
+| checksum | 64-bit FNV-1a of the initial cell bytes, 16 hexadecimal digits |
+
+`life1` uses the existing xorshift32 generator and 30% random soup, warmed up
+for 32 generations; figures and mixes begin at generation zero. The checksum
+covers ages and trails as well as occupancy, row by row without the scratch
+halo. It is a compatibility check, not a cryptographic integrity guarantee.
+Replay refuses a reconstructed world that differs from the recorded checksum.
+
+Recipes rely on a compatible generator and, for figures/mixes, figure library.
+They are not standalone grid snapshots. Keep the matching program version for
+long-term archives; a future catalogue change can require that older version
+to replay a mix. Gzip can compress archived journals further; decompress before
+replay. No compression library is needed by the application.
+
 ## Make it part of your desktop
 
 ```sh

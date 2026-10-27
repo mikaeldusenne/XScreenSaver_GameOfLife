@@ -19,8 +19,8 @@ all: game_of_life
 check-deps:
 	@$(PKG_CONFIG) --exists $(X11_PACKAGES) || { echo 'Install X11 development packages; see docs/INSTALL.md (or use CMake).'; exit 1; }
 
-game_of_life: game_of_life.c life.c life.h figures.c figures.h figures_data.inc scene.c scene.h VERSION Makefile | check-deps
-	$(CC) $(CPPFLAGS) $(APP_CPPFLAGS) $(CFLAGS) $(X11_CFLAGS) $(LDFLAGS) -o $@ game_of_life.c life.c figures.c scene.c $(X11_LIBS) $(LDLIBS)
+game_of_life: game_of_life.c life.c life.h figures.c figures.h figures_data.inc scene.c scene.h journal.c journal.h VERSION Makefile | check-deps
+	$(CC) $(CPPFLAGS) $(APP_CPPFLAGS) $(CFLAGS) $(X11_CFLAGS) $(LDFLAGS) -o $@ game_of_life.c life.c figures.c scene.c journal.c $(X11_LIBS) $(LDLIBS)
 
 check: tests/life_test tests/figures_test tests/scene_test
 	./tests/life_test

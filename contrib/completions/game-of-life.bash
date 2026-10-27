@@ -4,10 +4,12 @@ _game_of_life_complete() {
         COMPREPLY=( $(compgen -W "$(game-of-life figures | awk '{print $1}')" -- "$current") )
     elif [[ $previous == --lang ]]; then
         COMPREPLY=( $(compgen -W 'en fr' -- "$current") )
+    elif [[ $previous == --history ]]; then
+        COMPREPLY=( $(compgen -f -- "$current") )
     elif (( COMP_CWORD == 1 )); then
-        COMPREPLY=( $(compgen -W 'preview figure mix random wallpaper screensaver figures doctor version help' -- "$current") )
+        COMPREPLY=( $(compgen -W 'preview figure mix random wallpaper screensaver replay figures doctor version help' -- "$current") )
     else
-        COMPREPLY=( $(compgen -W '--fps --size --trail --seconds --seed --fullscreen --idle --lang --help' -- "$current") )
+        COMPREPLY=( $(compgen -W '--fps --size --trail --seconds --seed --fullscreen --idle --lang --history --no-history --replay --help' -- "$current") )
     fi
 }
 complete -F _game_of_life_complete game-of-life

@@ -14,6 +14,7 @@
 #include "life.h"
 #include "figures.h"
 #include "scene.h"
+#include "journal.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -39,23 +40,17 @@
 #define LIFE_VERSION "dev"
 #endif
 
-enum { BATCH = 256, HISTORY = 64 };
-enum mode { MODE_RANDOM, MODE_FIGURE, MODE_RANDOM_FIGURES, MODE_ALTERNATE };
-
-struct entry {
-    enum mode mode;
-    const struct figure *figure;
-    uint32_t random;
-};
-
+enum { BATCH = 1024, HISTORY = 64 };
 struct options {
     const char *display;
+    const char *history_path;
+    unsigned long replay_line;
     Window window;
     int size, fps, trail, seconds, idle;
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
-    bool root, fullscreen, wallpaper, doctor, english;
+    bool root, fullscreen, wallpaper, doctor, english, replay, no_history;
 };
 
 struct app {
@@ -77,6 +72,9 @@ struct app {
     enum mode scene;
     const struct figure *figure;
     struct entry history[HISTORY];
+    struct entry replay;
+    char *journal_path;
+    bool journaling;
     unsigned history_count, history_index;
     double idle_check, idle_after;
     bool own_window, visible, redraw, presenting;
@@ -174,6 +172,10 @@ options(int argc, char **argv)
                  "  -trail N           Trail length, 0..31 (default: 18)\n"
                  "  -seconds N         Fixed duration, 10..3600; 0 = adaptive (default)\n"
                  "  -seed N            Reproducible initial world, 0..4294967295\n"
+                 "  --history FILE     Append initial recipes (default: wallpaper only, XDG state)\n"
+                 "  --no-history       Disable history writes\n"
+                 "  --replay N         Replay history line N; 0 = last complete line\n"
+                 "                     Uses --history FILE or the default journal; never appends\n"
                  "Left click: next scene; right click: previous scene (replayed).\n"
                  "Preview: Escape/Q closes; Space gently renews the world.");
             exit(EXIT_SUCCESS);
@@ -198,13 +200,16 @@ options(int argc, char **argv)
             exit(EXIT_SUCCESS);
         }
         bool scene_option = !strcmp(arg, "-random") || !strcmp(arg, "-figure") ||
-            !strcmp(arg, "-random-figures") || !strcmp(arg, "-alternate") || !strcmp(arg, "-mode");
+            !strcmp(arg, "-random-figures") || !strcmp(arg, "-alternate") ||
+            !strcmp(arg, "-mode") || !strcmp(arg, "-replay");
         if (scene_option) {
             if (mode_chosen) fail("choose a single mode (see --help)");
             mode_chosen = true;
         }
         if (!strcmp(arg, "-doctor")) {
             opt.doctor = true;
+        } else if (!strcmp(arg, "-no-history")) {
+            opt.no_history = true;
         } else if (!strcmp(arg, "-root")) {
             opt.root = true;
         } else if (!strcmp(arg, "-fullscreen")) {
@@ -222,6 +227,14 @@ options(int argc, char **argv)
                 fail("missing option value (see -help)");
             const char *value = argv[++i];
             if (!strcmp(arg, "-display")) opt.display = value;
+            else if (!strcmp(arg, "-history")) {
+                if (!*value) fail("history path cannot be empty");
+                opt.history_path = value;
+            }
+            else if (!strcmp(arg, "-replay")) {
+                opt.replay = true;
+                opt.replay_line = number(value, 0, ULONG_MAX);
+            }
             else if (!strcmp(arg, "-window-id")) opt.window = number(value, 1, ULONG_MAX);
             else if (!strcmp(arg, "-size")) opt.size = (int)number(value, 0, 128);
             else if (!strcmp(arg, "-fps")) opt.fps = (int)number(value, 1, 60);
@@ -363,13 +376,14 @@ remember_scene(struct app *app)
         --app->history_count;
     }
     app->history_index = app->history_count++;
-    app->history[app->history_index] = (struct entry){mode, figure, app->life.random};
+    app->history[app->history_index] = app->options.replay ? app->replay :
+        (struct entry){.mode = mode, .figure = figure, .random = app->life.random};
 }
 
 static void
 seed(struct app *app)
 {
-    const struct entry *entry = &app->history[app->history_index];
+    struct entry *entry = &app->history[app->history_index];
     app->scene = entry->mode;
     app->figure = entry->figure;
     /* Store seeds, not grids: previous/next replays the same initial world. */
@@ -382,6 +396,14 @@ seed(struct app *app)
     int columns = width / size, rows = height / size;
     if (!columns) columns = 1;
     if (!rows) rows = 1;
+    if (app->options.replay) {
+        columns = entry->columns;
+        rows = entry->rows;
+        size = width / columns;
+        if (height / rows < size) size = height / rows;
+        if (size < 1) size = 1;
+        if (size > 128) size = 128;
+    }
     if ((columns != app->life.columns || rows != app->life.rows) &&
         !life_resize(&app->life, columns, rows))
         fail("cannot allocate grid; try a larger -size");
@@ -399,6 +421,21 @@ seed(struct app *app)
                      (rows - app->figure->height) / 2, 0);
     } else {
         figures_scatter(&app->life);
+    }
+    bool changed = entry->columns != columns || entry->rows != rows;
+    if (app->options.replay) {
+        if (journal_checksum(&app->life) != entry->checksum)
+            fail("history checksum mismatch: this generator/library cannot reproduce that world");
+    } else if (changed && app->journaling) {
+        entry->columns = columns;
+        entry->rows = rows;
+        entry->trail = (unsigned)app->options.trail;
+        entry->checksum = journal_checksum(&app->life);
+        if (!journal_append(app->journal_path, entry)) {
+            fprintf(stderr, "game_of_life: history disabled (%s): %s\n",
+                    app->journal_path, strerror(errno));
+            app->journaling = false;
+        }
     }
     if (app->own_window) {
         char title[96];
@@ -459,22 +496,35 @@ draw(struct app *app)
     }
     int size = app->size, gap = size >= 5 ? 1 : 0;
     const struct life *life = &app->life;
+    bool clipped = app->left < 0 || app->top < 0;
+    if (clipped) {
+        int height = app->height, footer = app->font->ascent + app->font->descent + 16;
+        if (height > footer + 16 && app->width >= 40) height -= footer;
+        XRectangle view = {0, 0, (unsigned short)app->width, (unsigned short)height};
+        XSetClipRectangles(app->display, app->gc, 0, 0, &view, 1, Unsorted);
+    }
     for (int y = 0; y < life->rows; ++y) {
         for (int x = 0; x < life->columns; ++x) {
             int i = (y + 1) * life->stride + x + 1;
             int color = life->cells[i];
             if (app->redraw ? !color : color == life->previous[i]) continue;
+            int run = 1;
+            /* Fine grids have no gutters: merge horizontal runs of changes. */
+            while (!gap && x + run < life->columns && life->cells[i + run] == color &&
+                   (app->redraw || life->previous[i + run] != color)) ++run;
             XRectangle rectangle = {
                 .x = (short)(app->left + x * size),
                 .y = (short)(app->top + y * size),
-                .width = (unsigned short)(size - gap),
+                .width = (unsigned short)(run * size - gap),
                 .height = (unsigned short)(size - gap)
             };
             app->rectangles[color][app->counts[color]++] = rectangle;
             if (app->counts[color] == BATCH) flush_color(app, color);
+            x += run - 1;
         }
     }
     for (int i = 0; i < LIFE_COLORS; ++i) flush_color(app, i);
+    if (clipped) XSetClipMask(app->display, app->gc, None);
     if (app->redraw && app->width >= 40 &&
         app->height > app->font->ascent + app->font->descent + 32) {
         /* The footer lies outside the grid, so its static label needs drawing
@@ -705,6 +755,23 @@ main(int argc, char **argv)
 {
     struct app app = {.options = options(argc, argv)};
     if (app.options.doctor) return doctor(&app.options);
+    app.journaling = !app.options.no_history && !app.options.replay &&
+        (app.options.wallpaper || app.options.history_path);
+    if (app.journaling || app.options.replay) {
+        app.journal_path = app.options.history_path ? strdup(app.options.history_path) : journal_path();
+        if (!app.journal_path) {
+            if (app.options.replay) fail("cannot locate history; use --history FILE");
+            fprintf(stderr, "game_of_life: history disabled; cannot locate state directory\n");
+            app.journaling = false;
+        }
+    }
+    if (app.options.replay) {
+        const char *error = journal_read(app.journal_path, app.options.replay_line, &app.replay);
+        if (error) fail(error);
+        app.options.mode = app.replay.mode;
+        app.options.figure = app.replay.figure;
+        app.options.trail = (int)app.replay.trail;
+    }
     struct sigaction action = {.sa_handler = stop};
     sigemptyset(&action.sa_mask);
     sigaction(SIGINT, &action, NULL);
@@ -733,6 +800,7 @@ main(int argc, char **argv)
     }
     scene_free(&app.timing);
     life_free(&app.life);
+    free(app.journal_path);
     XFreeFont(app.display, app.font);
     XFreeGC(app.display, app.gc);
     if (!window_destroyed) {

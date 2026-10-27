@@ -33,6 +33,7 @@ game-of-life figure bunnies      # A tiny seed, a very long story
 game-of-life mix                 # Let classic figures meet
 game-of-life figures gun         # Find something new
 game-of-life screensaver         # X11 wallpaper + saver after two idle minutes
+game-of-life replay              # Revisit the last recorded wallpaper world
 game-of-life doctor              # What can this session do?
 ```
 
@@ -40,6 +41,11 @@ game-of-life doctor              # What can this session do?
 you back to work and leaves the wallpaper alive. The 64-scene history replays
 the same initial worlds. Controls and the current figure are labeled discreetly.
 English and French captions follow the system locale, or `--lang en|fr`.
+
+**Keep the worlds, not the frames.** Wallpaper mode saves a tiny recipe for each
+initial world in `~/.local/state/game-of-life/history.tsv` (or `$XDG_STATE_HOME`).
+`game-of-life replay 42` brings line 42 back to life, at its original grid size.
+No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-world).
 
 <table>
 <tr><td><img src="img/figure-pulsar.png" alt="Pulsar, a symmetrical oscillator"></td><td><img src="img/figure-koks-galaxy.png" alt="Kok's galaxy"></td></tr>
@@ -94,6 +100,8 @@ and framing. X11 behavior has also been exercised under Xvfb and i3, including
 the real 120-second idle threshold, history replay, focus and hidden-window CPU
 pause. See the [historical CPU benchmarks](bench/README.md) for measurements and
 their limits; these are not electricity-consumption measurements.
+The [latest performance notes](bench/PERFORMANCE.md) compare the optimized
+neighbor calculation and X11 drawing separately, and discuss further options.
 
 CMake supports staging with `DESTDIR` and building native TGZ, DEB or RPM
 packages via CPack. Builds and simulation checks pass on Arch, Debian, Fedora
