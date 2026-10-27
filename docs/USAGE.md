@@ -166,6 +166,7 @@ density; `--fps 10` trades some animation speed for a lower CPU cost.
 | --- | --- | --- |
 | `--fps N` | 15 | Maximum frame rate, 1–60 |
 | `--size N` | 0 | Cell size in pixels; 0 chooses an economical grid |
+| `--random-size N` | 0 | Override size for random worlds and figure mixes only; 0 follows `--size` |
 | `--trail N` | 18 | Fading trail, 0–31 generations |
 | `--seconds N` | 0 | 0 = adaptive; otherwise 10–3600 seconds |
 | `--seed N` | Varies | Repeat a world at the same dimensions |

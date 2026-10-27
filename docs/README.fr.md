@@ -227,8 +227,12 @@ plus fin. Le programme se compile aussi sans aucune dépendance OpenGL.
 game-of-life doctor --gpu
 game-of-life random --gpu --size 1 --fullscreen
 game-of-life mix --gpu
+game-of-life preview --gpu --random-size 1 --fullscreen
 game-of-life preview --cpu
 ```
+
+`--random-size 1` affine les mondes aléatoires et les mélanges pendant
+l’alternance, tout en gardant le zoom automatique des figures seules.
 
 [Installation GPU et limites](GPU.md). La baisse du CPU ne suffit pas à prouver
 une baisse de consommation électrique. Une carte dédiée peut coûter plus cher

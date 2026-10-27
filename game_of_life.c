@@ -47,7 +47,7 @@ struct options {
     const char *history_path;
     unsigned long replay_line;
     Window window;
-    int size, fps, trail, seconds, idle;
+    int size, random_size, fps, trail, seconds, idle;
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
@@ -173,6 +173,8 @@ options(int argc, char **argv)
                  "  -fullscreen        Fullscreen preview; any key exits\n"
                  "  -display DISPLAY   X server (default: $DISPLAY)\n"
                  "  -size N            Cell size in pixels, 0 = automatic (default)\n"
+                 "  --random-size N    Override cell size for random cells and figure mixes\n"
+                 "                     0 = follow --size (default); single figures keep their zoom\n"
                  "  -fps N             Frames per second, 1..60 (default: 15)\n"
                  "  -trail N           Trail length, 0..31 (default: 18)\n"
                  "  -seconds N         Fixed duration, 10..3600; 0 = adaptive (default)\n"
@@ -246,6 +248,7 @@ options(int argc, char **argv)
             }
             else if (!strcmp(arg, "-window-id")) opt.window = number(value, 1, ULONG_MAX);
             else if (!strcmp(arg, "-size")) opt.size = (int)number(value, 0, 128);
+            else if (!strcmp(arg, "-random-size")) opt.random_size = (int)number(value, 0, 128);
             else if (!strcmp(arg, "-fps")) opt.fps = (int)number(value, 1, 60);
             else if (!strcmp(arg, "-trail")) opt.trail = (int)number(value, 0, 31);
             else if (!strcmp(arg, "-idle")) opt.idle = (int)number(value, 0, 86400);
@@ -416,7 +419,8 @@ seed(struct app *app)
     const struct figure *figure = app->scene == MODE_FIGURE ? app->figure : NULL;
     int size = app->scene == MODE_FIGURE
         ? scene_cell_size(width, height, app->options.size, figure)
-        : scene_random_cell_size(width, height, app->options.size);
+        : scene_random_cell_size(width, height,
+            app->options.random_size ? app->options.random_size : app->options.size);
     int columns = width / size, rows = height / size;
     if (!columns) columns = 1;
     if (!rows) rows = 1;

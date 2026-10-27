@@ -63,6 +63,11 @@ in Full HD), including in alternation. Mixes stay sparse: at most 128 figures
 and 5% initially live cells on normal-sized grids. Single figures keep their
 adaptive zoom. Startup is busier than a settled world.
 .TP
+.BI \-\-random-size " N"
+Override cell size for random worlds and figure mixes only, 1 to 128 pixels.
+Zero (the default) follows --size. Single figures keep their zoom; replays keep
+their recorded dimensions. Useful with --gpu --alternate --random-size 1.
+.TP
 .BI \-\-trail " N"
 Trail length, 0 to 31 generations; default 18.
 .TP

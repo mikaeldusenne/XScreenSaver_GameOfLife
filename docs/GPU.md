@@ -11,6 +11,7 @@ game-of-life doctor --gpu
 game-of-life random --gpu --size 1 --fullscreen
 game-of-life mix --gpu --size 2
 game-of-life figure bunnies --gpu
+game-of-life preview --gpu --random-size 1 --fullscreen
 game-of-life replay --gpu
 game-of-life replay 42 --gpu
 game-of-life preview --cpu
@@ -67,6 +68,11 @@ definition is explicit: `--size 1` gives roughly two million cells in Full HD;
 `--size 2` does the same on a 4K display. The existing allocation limit remains
 about four million cells, including the CPU grid's border. Larger worlds need
 a larger cell size. A single figure still keeps room around its seed.
+
+For alternation, `--random-size 1` makes random worlds and figure mixes finer
+while single figures keep their automatic zoom. Unlike the global `--size`,
+this override only affects those two scenes. `--random-size 0` follows the
+global setting. Replays always keep their recorded dimensions.
 
 The rules, wrapping edges, cell ages, fading trails, palette, captions,
 previous/next navigation, idle presentation and pause when covered are shared.
