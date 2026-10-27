@@ -63,7 +63,7 @@ static const char fragment_source[] =
     "#version 430 core\n"
     "uniform usampler2D world; uniform sampler2D caption;\n"
     "uniform vec3 palette[64]; uniform ivec2 window_size,origin;\n"
-    "uniform int cell_size,grid_height; out vec4 color;\n"
+    "uniform int cell_size,grid_height; uniform bool rounded; out vec4 color;\n"
     "void main() {\n"
     " ivec2 p=ivec2(gl_FragCoord.xy); p.y=window_size.y-1-p.y; vec3 rgb=palette[0];\n"
     " if(p.y>=grid_height) {\n"
@@ -72,7 +72,18 @@ static const char fragment_source[] =
     "  ivec2 q=p-origin,extent=textureSize(world,0)*cell_size;\n"
     "  if(all(greaterThanEqual(q,ivec2(0))) && all(lessThan(q,extent))) {\n"
     "   bool gap=cell_size>=5 && (q.x%cell_size==cell_size-1 || q.y%cell_size==cell_size-1);\n"
-    "   if(!gap) rgb=palette[texelFetch(world,q/cell_size,0).r];\n"
+    "   if(!gap) {\n"
+    "    uint value=texelFetch(world,q/cell_size,0).r; rgb=palette[value];\n"
+    /* A rounded box evaluated in pixel space: one texture read, no extra
+     * render target or pass. Fine worlds keep their exact square pixels. */
+    "    if(rounded && cell_size>=5 && value!=0u) {\n"
+    "     float half_width=float(cell_size-1)*0.5,radius=half_width*0.44;\n"
+    "     vec2 local=vec2(q%cell_size)+vec2(0.5)-vec2(half_width);\n"
+    "     vec2 d=abs(local)-vec2(half_width-radius);\n"
+    "     float distance=length(max(d,vec2(0)))+min(max(d.x,d.y),0.0)-radius;\n"
+    "     rgb=mix(palette[0],rgb,1.0-smoothstep(-0.5,0.5,distance));\n"
+    "    }\n"
+    "   }\n"
     "  }\n"
     " } color=vec4(rgb,1);\n"
     "}\n";
@@ -294,13 +305,15 @@ gpu_caption(struct gpu *gpu, Pixmap bitmap, int width, int height)
 }
 
 void
-gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top)
+gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top,
+         bool rounded)
 {
     glUseProgram(gpu->draw);
     glUniform2i(glGetUniformLocation(gpu->draw, "window_size"), width, height);
     glUniform2i(glGetUniformLocation(gpu->draw, "origin"), left, top);
     glUniform1i(glGetUniformLocation(gpu->draw, "cell_size"), size);
     glUniform1i(glGetUniformLocation(gpu->draw, "grid_height"), grid_height);
+    glUniform1i(glGetUniformLocation(gpu->draw, "rounded"), rounded);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gpu->states[gpu->current]);
     glActiveTexture(GL_TEXTURE1);
@@ -343,7 +356,8 @@ bool gpu_observe(struct gpu *gpu, struct gpu_stats *stats)
 { (void)gpu; (void)stats; return false; }
 bool gpu_caption(struct gpu *gpu, Pixmap bitmap, int width, int height)
 { (void)gpu; (void)bitmap; (void)width; (void)height; return false; }
-void gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top)
-{ (void)gpu; (void)width; (void)height; (void)grid_height; (void)size; (void)left; (void)top; }
+void gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top,
+              bool rounded)
+{ (void)gpu; (void)width; (void)height; (void)grid_height; (void)size; (void)left; (void)top; (void)rounded; }
 void gpu_close(struct gpu *gpu) { (void)gpu; }
 #endif

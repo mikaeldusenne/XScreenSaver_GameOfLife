@@ -1,0 +1,50 @@
+{
+  "renderer": "Quadro P1000/PCIe/SSE2",
+  "pixels": [
+    1920,
+    1080
+  ],
+  "all_cells_occupied": true,
+  "pairs_per_size": 20,
+  "results": [
+    {
+      "cell_pixels": 1,
+      "square_mean_ms": 0.487219,
+      "rounded_mean_ms": 0.48215,
+      "square_max_ms": 0.509952,
+      "rounded_max_ms": 0.510976
+    },
+    {
+      "cell_pixels": 4,
+      "square_mean_ms": 0.472678,
+      "rounded_mean_ms": 0.478054,
+      "square_max_ms": 0.480256,
+      "rounded_max_ms": 0.499712
+    },
+    {
+      "cell_pixels": 8,
+      "square_mean_ms": 0.484966,
+      "rounded_mean_ms": 0.55721,
+      "square_max_ms": 0.50688,
+      "rounded_max_ms": 0.581632
+    },
+    {
+      "cell_pixels": 32,
+      "square_mean_ms": 0.473293,
+      "rounded_mean_ms": 0.54528,
+      "square_max_ms": 0.495616,
+      "rounded_max_ms": 0.560128
+    },
+    {
+      "cell_pixels": 128,
+      "square_mean_ms": 0.465971,
+      "rounded_mean_ms": 0.543539,
+      "square_max_ms": 0.482304,
+      "rounded_max_ms": 0.567296
+    }
+  ],
+  "date": "2026-10-27",
+  "version": "0.6.0",
+  "gpu_source_sha256": "4b3bf8ed866eee32c97d7364958cd5d94778fbbda30e129e4d5cc23f7ecbbcc6",
+  "method": "GL_TIME_ELAPSED around fragment draw only, offscreen RGBA8 FBO; all world bytes 45; no simulation or swap; 4 warmup pairs, 20 measured square/rounded pairs in alternating order; 66.7 ms between draws. Not whole-frame, CPU or energy measurements."
+}

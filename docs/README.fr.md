@@ -32,6 +32,11 @@ make
 
 **Espace** renouvelle le monde ; **Échap** ou **Q** ferme l’aperçu.
 **Clic gauche** passe à la scène suivante, **clic droit** rejoue la précédente.
+La **molette** zoome autour du pointeur ; le **clic sur la molette** rétablit
+le cadrage initial. Le monde continue d’évoluer, y compris hors champ, sans être
+recréé ni ajouter de ligne au journal. Le zoom fonctionne avec les deux moteurs,
+dans l’aperçu, le fond d’écran et l’économiseur. Changer de scène ou redimensionner
+la fenêtre rétablit le cadrage ; les cellules vont de 1 à 128 pixels.
 
 ```sh
 ./game_of_life -fullscreen          # Une touche pour sortir ; clics pour naviguer
@@ -233,6 +238,11 @@ game-of-life preview --cpu
 
 `--random-size 1` affine les mondes aléatoires et les mélanges pendant
 l’alternance, tout en gardant le zoom automatique des figures seules.
+
+Les cellules GPU ont des coins arrondis et lissés dès qu’elles atteignent
+5 pixels, notamment en zoomant. Cet effet utilise le shader d’affichage existant,
+sans passe supplémentaire. `--square-cells` retrouve les coins carrés ; les
+cellules fines et le rendu CPU restent carrés.
 
 [Installation GPU et limites](GPU.md). La baisse du CPU ne suffit pas à prouver
 une baisse de consommation électrique. Une carte dédiée peut coûter plus cher

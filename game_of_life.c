@@ -51,7 +51,7 @@ struct options {
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
-    bool root, fullscreen, wallpaper, doctor, english, replay, no_history, gpu;
+    bool root, fullscreen, wallpaper, doctor, english, replay, no_history, gpu, square_cells;
 };
 
 struct app {
@@ -69,7 +69,7 @@ struct app {
     struct gpu *gpu;
     float rgb[LIFE_COLORS][3];
     struct options options;
-    int width, height, size, left, top;
+    int width, height, size, base_size, left, top;
     unsigned fading;
     struct scene timing;
     enum mode scene;
@@ -164,6 +164,7 @@ options(int argc, char **argv)
                  "  --version           Print version and build features\n"
                  "  --gpu               Compute and draw with OpenGL 4.3 (optional)\n"
                  "  --cpu               Use the original CPU/Xlib engine (default)\n"
+                 "  --square-cells      Sharp GPU cells (default: rounded from 5 pixels)\n"
                  "  --lang en|fr        Caption language (default: system locale)\n"
                  "  --wallpaper        Animate behind applications (default: alternate)\n"
                  "  --idle N           With --wallpaper, show above apps after N idle seconds\n"
@@ -184,6 +185,7 @@ options(int argc, char **argv)
                  "  --replay N         Replay history line N; 0 = last complete line\n"
                  "                     Uses --history FILE or the default journal; never appends\n"
                  "Left click: next scene; right click: previous scene (replayed).\n"
+                 "Wheel: zoom at pointer; middle click: reset view. The world keeps evolving.\n"
                  "Preview: Escape/Q closes; Space gently renews the world.");
             exit(EXIT_SUCCESS);
         }
@@ -219,6 +221,8 @@ options(int argc, char **argv)
             opt.gpu = true;
         } else if (!strcmp(arg, "-cpu")) {
             opt.gpu = false;
+        } else if (!strcmp(arg, "-square-cells")) {
+            opt.square_cells = true;
         } else if (!strcmp(arg, "-no-history")) {
             opt.no_history = true;
         } else if (!strcmp(arg, "-root")) {
@@ -405,6 +409,56 @@ remember_scene(struct app *app)
         (struct entry){.mode = mode, .figure = figure, .random = app->life.random};
 }
 
+static int
+grid_height(const struct app *app)
+{
+    int footer = app->font->ascent + app->font->descent + 16;
+    return app->width >= 40 && app->height > footer + 16
+        ? app->height - footer : app->height;
+}
+
+static void
+reset_view(struct app *app)
+{
+    app->size = app->base_size;
+    app->left = (app->width - app->life.columns * app->size) / 2;
+    app->top = (grid_height(app) - app->life.rows * app->size) / 2;
+    app->redraw = true;
+}
+
+static int
+view_origin(int origin, int extent, int available)
+{
+    if (extent <= available) return (available - extent) / 2;
+    if (origin > 0) return 0;
+    if (origin < available - extent) return available - extent;
+    return origin;
+}
+
+static void
+zoom(struct app *app, int direction, int x, int y)
+{
+    static const int sizes[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128};
+    int size = app->size, height = grid_height(app);
+    if (x < 0 || x >= app->width || y < 0 || y >= height) return;
+    if (direction > 0) {
+        for (size_t i = 0; i < sizeof(sizes) / sizeof(*sizes); ++i)
+            if (sizes[i] > size) { size = sizes[i]; break; }
+    } else {
+        for (size_t i = sizeof(sizes) / sizeof(*sizes); i-- > 0;)
+            if (sizes[i] < size) { size = sizes[i]; break; }
+    }
+    if (size == app->size) return;
+    /* Change only the camera. Keep the cell under the pointer in place;
+     * constrain the edges so zooming out never loses the world off-screen. */
+    int left = x - (int)((int64_t)(x - app->left) * size / app->size);
+    int top = y - (int)((int64_t)(y - app->top) * size / app->size);
+    app->left = view_origin(left, app->life.columns * size, app->width);
+    app->top = view_origin(top, app->life.rows * size, height);
+    app->size = size;
+    app->redraw = true;
+}
+
 static void
 seed(struct app *app)
 {
@@ -413,9 +467,7 @@ seed(struct app *app)
     app->figure = entry->figure;
     /* Store seeds, not grids: previous/next replays the same initial world. */
     app->life.random = entry->random;
-    int width = app->width, height = app->height;
-    int footer = app->font->ascent + app->font->descent + 16;
-    if (height > footer + 16 && width >= 40) height -= footer;
+    int width = app->width, height = grid_height(app);
     const struct figure *figure = app->scene == MODE_FIGURE ? app->figure : NULL;
     int size = app->scene == MODE_FIGURE
         ? scene_cell_size(width, height, app->options.size, figure)
@@ -435,9 +487,8 @@ seed(struct app *app)
     if ((columns != app->life.columns || rows != app->life.rows) &&
         !life_resize(&app->life, columns, rows))
         fail("cannot allocate grid; try a larger -size");
-    app->size = size;
-    app->left = (width - columns * size) / 2;
-    app->top = (height - rows * size) / 2;
+    app->base_size = size;
+    reset_view(app);
     if (app->scene == MODE_RANDOM) {
         life_seed(&app->life);
         /* Random soup opens on an established world, figures at generation zero. */
@@ -522,7 +573,7 @@ caption(struct app *app, Drawable drawable, GC gc, int height, unsigned long col
 {
     /* The footer lies outside the grid, so its static label needs drawing
      * only after an expose, a resize or a scene change. Core fonts are Latin-1. */
-    char label[128];
+    char label[160];
     if (app->scene == MODE_FIGURE)
         snprintf(label, sizeof(label), app->options.english ? "Figure: %s" : "Mode : une figure - %s",
                  app->figure->name);
@@ -530,6 +581,11 @@ caption(struct app *app, Drawable drawable, GC gc, int height, unsigned long col
         snprintf(label, sizeof(label), "%s", app->options.english
                  ? (app->scene == MODE_RANDOM ? "Mode: random" : "Mode: random figures")
                  : (app->scene == MODE_RANDOM ? "Mode : al\351atoire" : "Mode : figures al\351atoires"));
+    if (app->size != app->base_size) {
+        size_t used = strlen(label);
+        snprintf(label + used, sizeof(label) - used, " | zoom %.2gx",
+                 (double)app->size / app->base_size);
+    }
     int length = (int)strlen(label);
     while (length && XTextWidth(app->font, label, length) > app->width - 16) --length;
     XSetForeground(app->display, gc, color);
@@ -538,10 +594,10 @@ caption(struct app *app, Drawable drawable, GC gc, int height, unsigned long col
                 height - 8 - app->font->descent, label, length);
     if (app->own_window) {
         const char *hint = app->options.english
-            ? (app->presenting ? "Left click = next ; right click = previous ; any key = desktop"
-                               : "Left click = next ; right click = previous")
-            : (app->presenting ? "Clic gauche = suivant ; clic droit = pr\351c\351dent ; touche = bureau"
-                               : "Clic gauche = suivant ; clic droit = pr\351c\351dent");
+            ? (app->presenting ? "Left = next ; right = previous ; wheel = zoom ; middle = reset ; key = desktop"
+                               : "Left = next ; right = previous ; wheel = zoom ; middle = reset")
+            : (app->presenting ? "Gauche = suivant ; droit = pr\351c\351dent ; molette = zoom ; milieu = cadrage ; touche = bureau"
+                               : "Gauche = suivant ; droit = pr\351c\351dent ; molette = zoom ; milieu = cadrage");
         int hint_length = (int)strlen(hint);
         if (XTextWidth(app->font, hint, hint_length) +
             XTextWidth(app->font, label, length) + 40 <= app->width)
@@ -554,8 +610,7 @@ static void
 draw(struct app *app)
 {
     if (app->gpu) {
-        int footer = app->font->ascent + app->font->descent + 16;
-        if (app->width < 40 || app->height <= footer + 16) footer = 0;
+        int footer = app->height - grid_height(app);
         if (app->redraw) {
             int height = footer ? footer : 1;
             Pixmap bitmap = XCreatePixmap(app->display, app->window, (unsigned)app->width, (unsigned)height, 1);
@@ -570,7 +625,7 @@ draw(struct app *app)
             if (!ok) fail(gpu_error());
         }
         gpu_draw(app->gpu, app->width, app->height, app->height - footer,
-                 app->size, app->left, app->top);
+                 app->size, app->left, app->top, !app->options.square_cells);
         app->redraw = false;
         XFlush(app->display);
         return;
@@ -582,16 +637,26 @@ draw(struct app *app)
     }
     int size = app->size, gap = size >= 5 ? 1 : 0;
     const struct life *life = &app->life;
-    bool clipped = app->left < 0 || app->top < 0;
+    int height = grid_height(app);
+    bool clipped = app->left < 0 || app->top < 0 ||
+        app->left + life->columns * size > app->width || app->top + life->rows * size > height;
     if (clipped) {
-        int height = app->height, footer = app->font->ascent + app->font->descent + 16;
-        if (height > footer + 16 && app->width >= 40) height -= footer;
         XRectangle view = {0, 0, (unsigned short)app->width, (unsigned short)height};
         XSetClipRectangles(app->display, app->gc, 0, 0, &view, 1, Unsorted);
     }
-    for (int y = 0; y < life->rows; ++y) {
-        int left = app->redraw ? 0 : life->dirty_left[y];
-        int right = app->redraw ? life->columns : life->dirty_right[y];
+    /* Cull before converting to X11's 16-bit coordinates: a zoomed world
+     * can be much wider than the window or a signed short. */
+    int first_x = app->left < 0 ? -app->left / size : 0;
+    int first_y = app->top < 0 ? -app->top / size : 0;
+    int end_x = (app->width - app->left + size - 1) / size;
+    int end_y = (height - app->top + size - 1) / size;
+    if (end_x > life->columns) end_x = life->columns;
+    if (end_y > life->rows) end_y = life->rows;
+    for (int y = first_y; y < end_y; ++y) {
+        int left = app->redraw ? first_x : life->dirty_left[y];
+        int right = app->redraw ? end_x : life->dirty_right[y];
+        if (left < first_x) left = first_x;
+        if (right > end_x) right = end_x;
         for (int x = left; x < right; ++x) {
             int i = (y + 1) * life->stride + x + 1;
             if (!app->redraw && !(x & 7) && x + 8 <= right &&
@@ -603,7 +668,7 @@ draw(struct app *app)
             if (app->redraw ? !color : color == life->previous[i]) continue;
             int run = 1;
             /* Fine grids have no gutters: merge horizontal runs of changes. */
-            while (!gap && x + run < life->columns && life->cells[i + run] == color &&
+            while (!gap && x + run < right && life->cells[i + run] == color &&
                    (app->redraw || life->previous[i + run] != color)) ++run;
             XRectangle rectangle = {
                 .x = (short)(app->left + x * size),
@@ -819,7 +884,11 @@ events(struct app *app)
             break;
         case ButtonPress:
             if (event.xbutton.button == Button1) navigate(app, 1);
+            else if (event.xbutton.button == Button2) reset_view(app);
             else if (event.xbutton.button == Button3) navigate(app, -1);
+            else if (event.xbutton.button == Button4 || event.xbutton.button == Button5)
+                zoom(app, event.xbutton.button == Button4 ? 1 : -1,
+                     event.xbutton.x, event.xbutton.y);
             break;
         case KeyPress: {
             if (app->presenting) {

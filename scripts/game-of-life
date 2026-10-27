@@ -46,6 +46,8 @@ Game of Life — cheap & beautiful
   game-of-life random --gpu --size 1    Compute and draw a fine world on the GPU
 
 Left click: next. Right click: previous. In the saver, any key returns to work.
+Scroll: zoom at pointer. Middle click: reset view. The world keeps evolving.
+GPU cells have rounded corners when enlarged; --square-cells restores sharp ones.
 Renderer options can follow a command: --gpu, --cpu, --fps 10, --idle 300, ...
 All options: game_of_life --help. Manual: man game-of-life.
 HELP

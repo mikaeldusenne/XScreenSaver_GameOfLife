@@ -9,7 +9,7 @@ _game_of_life_complete() {
     elif (( COMP_CWORD == 1 )); then
         COMPREPLY=( $(compgen -W 'preview figure mix random wallpaper screensaver replay figures doctor version help' -- "$current") )
     else
-        COMPREPLY=( $(compgen -W '--gpu --cpu --fps --size --random-size --trail --seconds --seed --fullscreen --idle --lang --history --no-history --replay --help' -- "$current") )
+        COMPREPLY=( $(compgen -W '--gpu --cpu --square-cells --fps --size --random-size --trail --seconds --seed --fullscreen --idle --lang --history --no-history --replay --help' -- "$current") )
     fi
 }
 complete -F _game_of_life_complete game-of-life

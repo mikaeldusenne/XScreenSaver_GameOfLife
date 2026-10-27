@@ -53,6 +53,10 @@ The automatic grid budget stays the same. --size 1 selects a finer world.
 .B \-\-cpu
 Use the original CPU/Xlib engine. This is the default, also in GPU builds.
 .TP
+.B \-\-square-cells
+Use sharp corners in the GPU renderer. By default, GPU cells have antialiased
+rounded corners from five pixels upwards. Fine cells and CPU cells stay square.
+.TP
 .BI \-\-fps " N"
 Maximum frame rate, 1 to 60; default 15.
 .TP
@@ -112,6 +116,11 @@ Draw in XSCREENSAVER_WINDOW if provided, otherwise in the X11 root window.
 Print help or version/build capabilities without opening a display.
 .SH CONTROLS
 Left click advances. Right click replays the preceding scene from its beginning.
+Scroll up/down zooms around the pointer, from 1 to 128 pixels per cell.
+Middle click restores the initial view. Zoom does not restart the world,
+change its dimensions or append history; cells outside the view still evolve.
+Navigation and window resizing reset the view. Zoom works with either engine
+and does not dismiss the idle saver.
 The last 64 scene seeds are retained. Space advances in windowed preview;
 Escape or Q closes it. Any key dismisses the idle saver while keeping the
 wallpaper alive. Host-managed windows, including XScreenSaver, keep their own

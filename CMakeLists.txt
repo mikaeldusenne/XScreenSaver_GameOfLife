@@ -84,6 +84,7 @@ install(FILES bench/README.md bench/results.png bench/PERFORMANCE.md
         bench/dense-metadata-2026-10-27.json bench/dense-baseline-2026-10-27.json
         bench/dense-render-2026-10-27.json bench/dense-mix-2026-10-27.json
         bench/GPU.md bench/gpu-render-2026-10-27.json
+        bench/rounded-2026-10-27.json
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
 install(FILES img/preview.png img/figure-pulsar.png img/figure-koks-galaxy.png
         img/figure-bunnies.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)

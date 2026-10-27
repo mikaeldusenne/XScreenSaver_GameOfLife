@@ -40,6 +40,15 @@ buffer. The same scene is reproduced at the same window dimensions. Returning
 forward retraces scenes already seen. At the oldest stored scene, right click
 does nothing. A fixed `figure NAME` command keeps replaying that one figure.
 
+**Scroll up/down** zooms in/out around the pointer, from 1 to 128 pixels per
+cell. **Middle click** restores the initial framing. Zoom works in both CPU
+and GPU previews, wallpapers and idle savers; it does not dismiss the saver.
+It changes only the view: no reseeding, extra cells or history entries. The
+whole world keeps evolving outside the viewport. Zooming out centers worlds
+smaller than the window; navigation and window resizing reset the framing.
+At one pixel per cell, use a larger window to see more of a cropped replay.
+Host-managed windows such as XScreenSaver retain their own input handling.
+
 In windowed preview, **Space** advances gently; **Escape** or **Q** closes it.
 In fullscreen preview, any key exits. The caption shows the current mode and
 figure; controls sit in the opposite corner when there is enough room.
@@ -143,6 +152,10 @@ and rendering; `--cpu` selects the CPU engine explicitly. Both use the same
 automatic grid budget. To try a finer GPU world, use
 `game-of-life random --gpu --size 1 --fullscreen`. Check your driver with
 `game-of-life doctor --gpu`; [requirements and limitations](GPU.md).
+
+GPU cells are rounded with antialiased corners from five pixels onwards.
+Fine cells stay square for readability; `--square-cells` disables rounding.
+The CPU renderer keeps its square cells.
 
 Random worlds and figure mixes use an automatic budget of 256,000 cells, with
 cells at least two pixels wide. At 1920 × 1080 that means 3-pixel cells, roughly

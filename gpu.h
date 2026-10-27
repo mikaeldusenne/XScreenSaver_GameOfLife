@@ -17,6 +17,7 @@ bool gpu_step(struct gpu *gpu, unsigned trail, bool fade, bool sample);
 /* Observe a dispatched generation before issuing the next one. */
 bool gpu_observe(struct gpu *gpu, struct gpu_stats *stats);
 bool gpu_caption(struct gpu *gpu, Pixmap bitmap, int width, int height);
-void gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top);
+void gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top,
+              bool rounded);
 void gpu_close(struct gpu *gpu);
 #endif

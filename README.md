@@ -38,7 +38,8 @@ game-of-life doctor              # What can this session do?
 game-of-life random --gpu --size 1 # Try the optional GPU engine, one pixel per cell
 ```
 
-**Left click → next. Right click → previous.** In the idle saver, any key brings
+**Left click → next. Right click → previous. Scroll → zoom at the pointer.**
+Middle click restores the original view. In the idle saver, any key brings
 you back to work and leaves the wallpaper alive. The 64-scene history replays
 the same initial worlds. Controls and the current figure are labeled discreetly.
 English and French captions follow the system locale, or `--lang en|fr`.
@@ -70,6 +71,10 @@ OpenGL 4.3. The original CPU/Xlib engine stays available with `--cpu`, including
 builds without any OpenGL dependency. Both engines share the same figures,
 palette, controls and replayable initial worlds. Check `game-of-life doctor --gpu`
 before trying it. [GPU setup and tradeoffs](docs/GPU.md).
+
+GPU cells have softly rounded corners from five pixels upwards, including
+when zoomed in. Use `--square-cells` for sharp corners. Zoom changes only the
+view: the same world keeps evolving, with the same simulation cost.
 
 The library includes 148 still lifes, 387 oscillators, 90 spaceships, 15 guns,
 14 puffers, 5 rakes, 25 long-lived seeds and 126 other evolving patterns.

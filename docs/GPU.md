@@ -76,6 +76,26 @@ global setting. Replays always keep their recorded dimensions.
 
 The rules, wrapping edges, cell ages, fading trails, palette, captions,
 previous/next navigation, idle presentation and pause when covered are shared.
+Scroll zooms around the pointer, and middle click restores the initial view,
+without changing or restarting the simulated world. Zoom does not reduce the
+simulation cost: cells outside the viewport still evolve.
+
+From version 0.6, GPU cells have rounded, antialiased corners at sizes of five
+pixels or more. The fragment shader evaluates a rounded rectangle using the
+existing cell read: no extra texture, render pass or CPU work per cell. Smaller
+cells remain square. `--square-cells` restores the original GPU appearance,
+also useful for pixel comparisons with the CPU renderer. Rounding changes only
+the display and never affects journal checksums or the rules of Life.
+
+On the development Quadro P1000, an isolated Full HD fragment draw took about
+0.47–0.49 ms with square cells and 0.54–0.56 ms with rounded cells at sizes
+8, 32 and 128: roughly 0.07–0.08 ms extra. Sizes 1 and 4 stayed around
+0.47–0.49 ms in either mode. These are GPU draw times, not whole-frame, CPU
+or power measurements. The offscreen RGBA8 target was 1920 × 1080, with every
+cell occupied; 20 square/rounded pairs were timed in alternating order after
+four warmup pairs, using `GL_TIME_ELAPSED` and 66.7 ms between draws.
+[Raw measurements](../bench/rounded-2026-10-27.json).
+
 The scene's initial state is generated on the CPU, including the 32-generation
 random warmup, so existing `life1` recipes and their checksums remain valid.
 After upload, every animation generation is calculated on the GPU.
