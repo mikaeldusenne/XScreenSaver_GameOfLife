@@ -17,6 +17,7 @@ sparse mix of figures. No configuration file is needed.
 | Random cells finding their own rhythm | `game-of-life random` |
 | A quieter, slower world | `game-of-life preview --fps 10` |
 | A screen-filling view | `game-of-life preview --fullscreen` |
+| Warm embers and subtle flames | `game-of-life fancy` |
 
 The menu launcher also offers Pulsar, Bunnies and fullscreen actions where
 the desktop supports them.
@@ -156,6 +157,30 @@ automatic grid budget. To try a finer GPU world, use
 GPU cells are rounded with antialiased corners from five pixels onwards.
 Fine cells stay square for readability; `--square-cells` disables rounding.
 The CPU renderer keeps its square cells.
+
+### Fancy: a little fire
+
+`--fancy` selects the GPU and adds a warm palette, cooling ember trails and
+small, gently swaying flames above the cells. It combines with every scene:
+
+```sh
+game-of-life fancy --fullscreen
+game-of-life figure pulsar --fancy
+game-of-life random --fancy --random-size 1
+game-of-life replay 42 --fancy
+game-of-life screensaver --fancy --random-size 1
+```
+
+The caption identifies the style. Scroll still zooms around the pointer, and
+middle click restores the framing. Cells remain crisp; the flames are a visual
+overlay and never change the rules, seeds or scene timing. Recipes do not store
+the style: add `--fancy` when replaying one. Animation pauses when covered.
+
+`--classic` restores the original colors without changing the selected engine.
+`--cpu` returns to the classic CPU renderer. Options apply left to right:
+`--cpu --fancy` selects fancy on GPU, while `--fancy --cpu` selects classic on CPU.
+A CPU-only build reports that GPU support is unavailable when asked for fancy;
+use `--cpu` or install the [GPU dependencies](GPU.md).
 
 Random worlds and figure mixes use an automatic budget of 256,000 cells, with
 cells at least two pixels wide. At 1920 × 1080 that means 3-pixel cells, roughly

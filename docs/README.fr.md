@@ -233,6 +233,8 @@ game-of-life doctor --gpu
 game-of-life random --gpu --size 1 --fullscreen
 game-of-life mix --gpu
 game-of-life preview --gpu --random-size 1 --fullscreen
+game-of-life fancy --fullscreen
+game-of-life figure pulsar --fancy
 game-of-life preview --cpu
 ```
 
@@ -243,6 +245,18 @@ Les cellules GPU ont des coins arrondis et lissés dès qu’elles atteignent
 5 pixels, notamment en zoomant. Cet effet utilise le shader d’affichage existant,
 sans passe supplémentaire. `--square-cells` retrouve les coins carrés ; les
 cellules fines et le rendu CPU restent carrés.
+
+Le style **`--fancy`** allume les naissances en crème, colore les cellules âgées
+en ambre et laisse des braises derrière elles. De petites flammes montent avec
+une oscillation douce ; les cellules restent nettes. Il sélectionne le GPU et
+se combine avec les trois modes, le zoom et la relecture des favoris.
+`game-of-life fancy` lance directement l’alternance avec ce style.
+
+`--classic` retrouve les couleurs habituelles en gardant le moteur sélectionné ;
+`--cpu` retrouve le rendu CPU classique. L’effet reste une seule passe graphique,
+sans texture supplémentaire, et s’arrête quand le fond est masqué. Il ne modifie
+ni les règles, ni les graines, ni les durées des scènes. Les recettes ne stockent
+pas le style : ajouter `--fancy` à la commande de relecture pour le retrouver.
 
 [Installation GPU et limites](GPU.md). La baisse du CPU ne suffit pas à prouver
 une baisse de consommation électrique. Une carte dédiée peut coûter plus cher

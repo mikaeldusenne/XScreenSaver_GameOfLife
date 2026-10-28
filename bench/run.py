@@ -71,6 +71,8 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
                '--history', str(history)]
     if getattr(args, 'engine', 'cpu') == 'gpu':
         command.append('--gpu')
+    if getattr(args, 'style', 'classic') == 'fancy':
+        command.append('--fancy')
     # On the real desktop this includes other clients' Xorg/compositor activity.
     initial = sum(cpu_seconds(pid) for pid in servers)
     initial_time = time.monotonic()
@@ -139,6 +141,7 @@ def measure(binary, directory, display, servers, width, height, size, args, inde
                       width=width, height=height, size=size, actual_size=actual_size,
                       columns=columns, rows=rows, cells=columns * rows, footer_px=footer,
                       mode=recipe[2], engine=getattr(args, 'engine', 'cpu'),
+                      style=getattr(args, 'style', 'classic'),
                       target_fps=args.fps, seed=args.seed, warmup_s=args.warmup,
                       elapsed_s=end - start, client_cpu=client, graphics_cpu=server,
                       graphics_baseline_cpu=baseline, total_cpu=client + server,
@@ -157,6 +160,8 @@ def main():
     parser.add_argument('--desktop', action='store_true')
     parser.add_argument('--engine', choices=('cpu', 'gpu'), default='cpu',
                         help='GPU needs OpenGL 4.3; Xvfb usually uses software GL, not hardware')
+    parser.add_argument('--style', choices=('classic', 'fancy'), default='classic',
+                        help='Fancy flame rendering requires --engine gpu')
     parser.add_argument('--graphics-pids', default='', help='Comma-separated Xorg/compositor PIDs for --desktop')
     parser.add_argument('--cases', default='1920x1080:0,1920x1080:4,1920x1080:3,1920x1080:2,1920x1080:1,3840x2160:0,3840x2160:8,3840x2160:6,3840x2160:4,7680x4320:0,7680x4320:16')
     parser.add_argument('--seconds', type=float, default=10)
@@ -174,6 +179,8 @@ def main():
     parser.add_argument('--no-frame-probe', action='store_true', help='Measure the shipped binary without the XSync/frame counter')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    if args.style == 'fancy' and args.engine != 'gpu':
+        parser.error('--style fancy needs --engine gpu')
     if min(args.seconds, args.warmup, args.baseline, *(args.phases or [1])) <= 0:
         parser.error('Durations must be positive')
     if args.desktop and not args.graphics_pids:

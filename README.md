@@ -36,6 +36,7 @@ game-of-life screensaver         # X11 wallpaper + saver after two idle minutes
 game-of-life replay              # Revisit the last recorded wallpaper world
 game-of-life doctor              # What can this session do?
 game-of-life random --gpu --size 1 # Try the optional GPU engine, one pixel per cell
+game-of-life fancy                # Warm embers and subtle rising flames (GPU)
 ```
 
 **Left click → next. Right click → previous. Scroll → zoom at the pointer.**
@@ -75,6 +76,11 @@ before trying it. [GPU setup and tradeoffs](docs/GPU.md).
 GPU cells have softly rounded corners from five pixels upwards, including
 when zoomed in. Use `--square-cells` for sharp corners. Zoom changes only the
 view: the same world keeps evolving, with the same simulation cost.
+
+**A little fire.** `--fancy` adds cream-colored births, amber cells, cooling
+embers and gently rising flames. It selects the GPU engine and works with
+any scene, zoom or replay. Try `game-of-life figure pulsar --fancy`.
+`--classic` restores the original palette and removes the flames.
 
 The library includes 148 still lifes, 387 oscillators, 90 spaceships, 15 guns,
 14 puffers, 5 rakes, 25 long-lived seeds and 126 other evolving patterns.

@@ -16,6 +16,7 @@ struct gpu {
     GLXContext context;
     GLuint step, draw, states[2], visited, counters, caption, vao;
     int columns, rows, current;
+    unsigned frame;
     bool double_buffer;
 };
 
@@ -63,27 +64,60 @@ static const char fragment_source[] =
     "#version 430 core\n"
     "uniform usampler2D world; uniform sampler2D caption;\n"
     "uniform vec3 palette[64]; uniform ivec2 window_size,origin;\n"
-    "uniform int cell_size,grid_height; uniform bool rounded; out vec4 color;\n"
+    "uniform int cell_size,grid_height; uniform bool rounded,fancy; uniform float phase; out vec4 color;\n"
+    /* Probe the existing world; bounds checks are explicit for integer
+     * texelFetch. The plume is a display effect, never a simulation input. */
+    "float ember(vec2 p) {\n"
+    " vec2 cell=p/float(cell_size); ivec2 at=ivec2(floor(cell));\n"
+    " if(any(lessThan(at,ivec2(0))) || any(greaterThanEqual(at,textureSize(world,0)))) return 0.0;\n"
+    " uint v=texelFetch(world,at,0).r;\n"
+    " float heat=v>=32u ? mix(1.0,0.55,float(v-32u)/31.0) : float(v)*0.012;\n"
+    " if(cell_size>=5) {\n"
+    "  vec2 d=abs(fract(cell)-vec2(0.5));\n"
+    "  heat*=1.0-smoothstep(0.22,0.5,d.x);\n"
+    "  heat*=1.0-smoothstep(0.25,0.5,d.y);\n"
+    " } return heat;\n"
+    "}\n"
+    "vec3 fire(uint value,float flicker) {\n"
+    " if(value>=32u) {\n"
+    "  float age=float(value-32u)/31.0;\n"
+    "  return mix(vec3(1.0,0.91,0.65),vec3(1.0,0.43,0.12),age)*(0.94+0.06*flicker);\n"
+    " } float t=float(value)/31.0;\n"
+    " return palette[0]+vec3(0.85,0.19,0.025)*t*t;\n"
+    "}\n"
     "void main() {\n"
     " ivec2 p=ivec2(gl_FragCoord.xy); p.y=window_size.y-1-p.y; vec3 rgb=palette[0];\n"
     " if(p.y>=grid_height) {\n"
-    "  float ink=texelFetch(caption,ivec2(p.x,p.y-grid_height),0).r; rgb=mix(rgb,palette[45],ink);\n"
+    "  float ink=texelFetch(caption,ivec2(p.x,p.y-grid_height),0).r;\n"
+    "  rgb=mix(rgb,fancy ? vec3(0.72,0.47,0.25) : palette[45],ink);\n"
     " } else {\n"
     "  ivec2 q=p-origin,extent=textureSize(world,0)*cell_size;\n"
     "  if(all(greaterThanEqual(q,ivec2(0))) && all(lessThan(q,extent))) {\n"
     "   bool gap=cell_size>=5 && (q.x%cell_size==cell_size-1 || q.y%cell_size==cell_size-1);\n"
-    "   if(!gap) {\n"
-    "    uint value=texelFetch(world,q/cell_size,0).r; rgb=palette[value];\n"
+    "   uint value=gap ? 0u : texelFetch(world,q/cell_size,0).r;\n"
+    "   float coverage=gap ? 0.0 : 1.0; rgb=palette[value];\n"
     /* A rounded box evaluated in pixel space: one texture read, no extra
      * render target or pass. Fine worlds keep their exact square pixels. */
-    "    if(rounded && cell_size>=5 && value!=0u) {\n"
-    "     float half_width=float(cell_size-1)*0.5,radius=half_width*0.44;\n"
-    "     vec2 local=vec2(q%cell_size)+vec2(0.5)-vec2(half_width);\n"
-    "     vec2 d=abs(local)-vec2(half_width-radius);\n"
-    "     float distance=length(max(d,vec2(0)))+min(max(d.x,d.y),0.0)-radius;\n"
-    "     rgb=mix(palette[0],rgb,1.0-smoothstep(-0.5,0.5,distance));\n"
-    "    }\n"
+    "   if(rounded && cell_size>=5 && value!=0u) {\n"
+    "    float half_width=float(cell_size-1)*0.5,radius=half_width*0.44;\n"
+    "    vec2 local=vec2(q%cell_size)+vec2(0.5)-vec2(half_width);\n"
+    "    vec2 d=abs(local)-vec2(half_width-radius);\n"
+    "    float distance=length(max(d,vec2(0)))+min(max(d.x,d.y),0.0)-radius;\n"
+    "    coverage=1.0-smoothstep(-0.5,0.5,distance);\n"
     "   }\n"
+    "   if(fancy) {\n"
+    "    float height=clamp(float(cell_size)*1.2,3.0,32.0);\n"
+    "    vec2 pos=vec2(q)+vec2(0.5);\n"
+    "    float wave=sin(pos.x/(height*2.7)+pos.y/(height*1.6)-phase*13.0);\n"
+    "    float flicker=0.5+0.5*sin(pos.x/(height*1.3)+pos.y/height-phase*23.0);\n"
+    "    float sway=wave*height*0.18;\n"
+    "    float glow=0.44*ember(pos+vec2(sway,height*0.28));\n"
+    "    glow+=0.28*ember(pos+vec2(sway*1.6,height*0.65));\n"
+    "    glow+=0.16*ember(pos+vec2(sway*2.0,height*1.1));\n"
+    "    glow*=0.8+0.2*flicker;\n"
+    "    vec3 plume=palette[0]+vec3(0.62,0.17,0.02)*glow;\n"
+    "    rgb=mix(plume,fire(value,flicker),value==0u ? 0.0 : coverage);\n"
+    "   } else rgb=mix(palette[0],rgb,coverage);\n"
     "  }\n"
     " } color=vec4(rgb,1);\n"
     "}\n";
@@ -245,6 +279,7 @@ gpu_seed(struct gpu *gpu, const struct life *life, const uint8_t *visited)
     texture(gpu->visited, life->columns, life->rows, visited + life->stride + 1);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     gpu->columns = life->columns; gpu->rows = life->rows; gpu->current = 0;
+    gpu->frame = 0;
     return gl_ok("allocating GPU world; try a larger --size");
 }
 
@@ -265,6 +300,7 @@ gpu_step(struct gpu *gpu, unsigned trail, bool fade, bool sample)
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
                     GL_BUFFER_UPDATE_BARRIER_BIT);
     gpu->current = 1 - gpu->current;
+    ++gpu->frame;
     return gl_ok("advancing GPU world");
 }
 
@@ -306,7 +342,7 @@ gpu_caption(struct gpu *gpu, Pixmap bitmap, int width, int height)
 
 void
 gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top,
-         bool rounded)
+         bool rounded, bool fancy)
 {
     glUseProgram(gpu->draw);
     glUniform2i(glGetUniformLocation(gpu->draw, "window_size"), width, height);
@@ -314,6 +350,11 @@ gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int 
     glUniform1i(glGetUniformLocation(gpu->draw, "cell_size"), size);
     glUniform1i(glGetUniformLocation(gpu->draw, "grid_height"), grid_height);
     glUniform1i(glGetUniformLocation(gpu->draw, "rounded"), rounded);
+    glUniform1i(glGetUniformLocation(gpu->draw, "fancy"), fancy);
+    /* A periodic simulation clock: expose/zoom and hidden time cannot make
+     * the flames jump, and long sessions do not lose float precision. */
+    glUniform1f(glGetUniformLocation(gpu->draw, "phase"),
+                (float)(gpu->frame % 960) * (6.28318530718f / 960));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gpu->states[gpu->current]);
     glActiveTexture(GL_TEXTURE1);
@@ -357,7 +398,7 @@ bool gpu_observe(struct gpu *gpu, struct gpu_stats *stats)
 bool gpu_caption(struct gpu *gpu, Pixmap bitmap, int width, int height)
 { (void)gpu; (void)bitmap; (void)width; (void)height; return false; }
 void gpu_draw(struct gpu *gpu, int width, int height, int grid_height, int size, int left, int top,
-              bool rounded)
-{ (void)gpu; (void)width; (void)height; (void)grid_height; (void)size; (void)left; (void)top; (void)rounded; }
+              bool rounded, bool fancy)
+{ (void)gpu; (void)width; (void)height; (void)grid_height; (void)size; (void)left; (void)top; (void)rounded; (void)fancy; }
 void gpu_close(struct gpu *gpu) { (void)gpu; }
 #endif

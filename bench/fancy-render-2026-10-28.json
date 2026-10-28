@@ -1,0 +1,45 @@
+[
+  {
+    "backend": "desktop",
+    "width": 1920,
+    "height": 1080,
+    "size": 1,
+    "actual_size": 1,
+    "columns": 1920,
+    "rows": 1054,
+    "cells": 2023680,
+    "footer_px": 26,
+    "mode": "random",
+    "engine": "gpu",
+    "style": "fancy",
+    "target_fps": 15,
+    "seed": 42,
+    "warmup_s": 0.5,
+    "elapsed_s": 20.00104601701605,
+    "client_cpu": 0.9999477018844334,
+    "graphics_cpu": 0.9999477018835239,
+    "graphics_baseline_cpu": 0.0,
+    "total_cpu": 1.9998954037679573,
+    "rss_kib": 134132,
+    "fps": 14.69923121770117,
+    "p95_frame_ms": 68.38723798864521,
+    "phases": [
+      {
+        "start_s": 0.5092287909938022,
+        "end_s": 10.509404489013832,
+        "client_cpu": 0.6999877013546828,
+        "graphics_cpu": 0.899984187455202,
+        "total_cpu": 1.5999718888098848,
+        "fps": 14.799739971499005
+      },
+      {
+        "start_s": 10.509404489013832,
+        "end_s": 20.510274808009854,
+        "client_cpu": 1.2998868683765772,
+        "graphics_cpu": 1.099904273240719,
+        "total_cpu": 2.399791141617296,
+        "fps": 14.598729444844638
+      }
+    ]
+  }
+]

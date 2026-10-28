@@ -85,9 +85,10 @@ install(FILES bench/README.md bench/results.png bench/PERFORMANCE.md
         bench/dense-render-2026-10-27.json bench/dense-mix-2026-10-27.json
         bench/GPU.md bench/gpu-render-2026-10-27.json
         bench/rounded-2026-10-27.json
+        bench/fancy-draw-2026-10-28.json bench/fancy-render-2026-10-28.json
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/bench)
 install(FILES img/preview.png img/figure-pulsar.png img/figure-koks-galaxy.png
-        img/figure-bunnies.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)
+        img/figure-bunnies.png img/fancy-pulsar.png DESTINATION ${CMAKE_INSTALL_DOCDIR}/img)
 install(FILES contrib/game-of-life.svg DESTINATION ${CMAKE_INSTALL_DOCDIR}/contrib)
 install(FILES contrib/game-of-life-wallpaper.service DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/game-of-life)
 install(FILES contrib/completions/game-of-life.bash

@@ -15,6 +15,7 @@ command=${1:-preview}
 if [ "$#" -gt 0 ]; then shift; fi
 case $command in
     preview) exec "$renderer" --alternate "$@" ;;
+    fancy) exec "$renderer" --alternate --fancy "$@" ;;
     figure) exec "$renderer" --figure "$@" ;;
     mix) exec "$renderer" --random-figures "$@" ;;
     random) exec "$renderer" --random "$@" ;;
@@ -36,6 +37,7 @@ Game of Life — cheap & beautiful
   game-of-life                         A living collection, ready to watch
   game-of-life figure pulsar           One figure, room to grow
   game-of-life mix                     A garden of classic patterns
+  game-of-life fancy                   Warm embers and subtle flames (GPU)
   game-of-life figures gun             Find a figure by name or family
   game-of-life wallpaper               Animate behind X11 applications
   game-of-life screensaver             Wallpaper + saver after two idle minutes

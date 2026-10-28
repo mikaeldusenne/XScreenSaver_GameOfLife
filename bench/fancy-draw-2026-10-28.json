@@ -1,0 +1,51 @@
+{
+  "renderer": "Quadro P1000/PCIe/SSE2",
+  "pixels": [
+    1920,
+    1080
+  ],
+  "random_seed": 42,
+  "warmup_generations": 32,
+  "pairs_per_size": 20,
+  "results": [
+    {
+      "cell_pixels": 1,
+      "classic_mean_ms": 0.496896,
+      "fancy_mean_ms": 0.892467,
+      "classic_max_ms": 0.515072,
+      "fancy_max_ms": 0.91136
+    },
+    {
+      "cell_pixels": 4,
+      "classic_mean_ms": 0.556083,
+      "fancy_mean_ms": 0.990208,
+      "classic_max_ms": 0.995328,
+      "fancy_max_ms": 1.769472
+    },
+    {
+      "cell_pixels": 8,
+      "classic_mean_ms": 1.098035,
+      "fancy_mean_ms": 2.153725,
+      "classic_max_ms": 1.1008,
+      "fancy_max_ms": 2.157568
+    },
+    {
+      "cell_pixels": 32,
+      "classic_mean_ms": 2.017178,
+      "fancy_mean_ms": 3.897702,
+      "classic_max_ms": 2.762752,
+      "fancy_max_ms": 5.328896
+    },
+    {
+      "cell_pixels": 128,
+      "classic_mean_ms": 2.698035,
+      "fancy_mean_ms": 5.260749,
+      "classic_max_ms": 2.707456,
+      "fancy_max_ms": 5.26848
+    }
+  ],
+  "date": "2026-10-28",
+  "version": "0.7.0",
+  "gpu_source_sha256": "9a46e171a7b5231f78f666da4fafd9f4ff19f5f7192d1e85b3bfbf00e9b481f4",
+  "method": "GL_TIME_ELAPSED around fragment draw only, offscreen RGBA8 FBO 1920x1080. Seed 42, 1920x1054 world with 32 CPU warmup steps, then fixed state and varying flame phase. Rounded cells enabled. 4 warmup pairs, 20 measured classic/fancy pairs in alternating order, 66.7 ms between draws. Automatic GPU clocks left unchanged; not whole-frame, CPU or energy measurements."
+}

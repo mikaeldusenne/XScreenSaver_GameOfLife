@@ -51,7 +51,7 @@ struct options {
     unsigned seed;
     enum mode mode;
     const struct figure *figure;
-    bool root, fullscreen, wallpaper, doctor, english, replay, no_history, gpu, square_cells;
+    bool root, fullscreen, wallpaper, doctor, english, replay, no_history, gpu, square_cells, fancy;
 };
 
 struct app {
@@ -164,6 +164,8 @@ options(int argc, char **argv)
                  "  --version           Print version and build features\n"
                  "  --gpu               Compute and draw with OpenGL 4.3 (optional)\n"
                  "  --cpu               Use the original CPU/Xlib engine (default)\n"
+                 "  --fancy             Ember colors and subtle rising flames; selects GPU\n"
+                 "  --classic           Original colors, no flames (default)\n"
                  "  --square-cells      Sharp GPU cells (default: rounded from 5 pixels)\n"
                  "  --lang en|fr        Caption language (default: system locale)\n"
                  "  --wallpaper        Animate behind applications (default: alternate)\n"
@@ -221,6 +223,11 @@ options(int argc, char **argv)
             opt.gpu = true;
         } else if (!strcmp(arg, "-cpu")) {
             opt.gpu = false;
+            opt.fancy = false;
+        } else if (!strcmp(arg, "-fancy")) {
+            opt.fancy = opt.gpu = true;
+        } else if (!strcmp(arg, "-classic")) {
+            opt.fancy = false;
         } else if (!strcmp(arg, "-square-cells")) {
             opt.square_cells = true;
         } else if (!strcmp(arg, "-no-history")) {
@@ -581,6 +588,8 @@ caption(struct app *app, Drawable drawable, GC gc, int height, unsigned long col
         snprintf(label, sizeof(label), "%s", app->options.english
                  ? (app->scene == MODE_RANDOM ? "Mode: random" : "Mode: random figures")
                  : (app->scene == MODE_RANDOM ? "Mode : al\351atoire" : "Mode : figures al\351atoires"));
+    if (app->options.fancy)
+        strncat(label, " | fancy", sizeof(label) - strlen(label) - 1);
     if (app->size != app->base_size) {
         size_t used = strlen(label);
         snprintf(label + used, sizeof(label) - used, " | zoom %.2gx",
@@ -625,7 +634,7 @@ draw(struct app *app)
             if (!ok) fail(gpu_error());
         }
         gpu_draw(app->gpu, app->width, app->height, app->height - footer,
-                 app->size, app->left, app->top, !app->options.square_cells);
+                 app->size, app->left, app->top, !app->options.square_cells, app->options.fancy);
         app->redraw = false;
         XFlush(app->display);
         return;

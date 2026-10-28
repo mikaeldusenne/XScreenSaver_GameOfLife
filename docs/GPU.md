@@ -11,13 +11,16 @@ game-of-life doctor --gpu
 game-of-life random --gpu --size 1 --fullscreen
 game-of-life mix --gpu --size 2
 game-of-life figure bunnies --gpu
+game-of-life fancy --fullscreen
+game-of-life figure pulsar --fancy
 game-of-life preview --gpu --random-size 1 --fullscreen
 game-of-life replay --gpu
 game-of-life replay 42 --gpu
 game-of-life preview --cpu
 ```
 
-`--gpu` is opt-in for every command, including `screensaver` and `wallpaper`.
+GPU rendering is opt-in for every command, including `screensaver` and
+`wallpaper`: choose `--gpu`, or `--fancy` for the flame style.
 There is no automatic switch to a different engine. If the build or display
 cannot support it, the program explains the failure; use `--cpu` to continue
 with Xlib. Installing this version does not change existing autostart commands.
@@ -95,6 +98,46 @@ or power measurements. The offscreen RGBA8 target was 1920 × 1080, with every
 cell occupied; 20 square/rounded pairs were timed in alternating order after
 four warmup pairs, using `GL_TIME_ELAPSED` and 66.7 ms between draws.
 [Raw measurements](../bench/rounded-2026-10-27.json).
+
+Version 0.7 adds `--fancy`: hot cream-colored births, older amber cells,
+cooling ember trails and subtle rising flames. It selects the GPU engine;
+`--classic` disables the effect while retaining that engine. `--cpu` selects
+the classic CPU renderer. The last applicable option wins.
+
+Fancy uses the existing age/trail byte, three extra bounded world samples and
+two smooth oscillations in the same fragment pass. It allocates no intermediate
+texture and does no CPU work per cell. The original cell silhouettes stay crisp,
+including rounded corners; the caption stays outside the effect. A periodic
+clock advances with the simulation, so covering the wallpaper pauses the effect,
+and zooming or exposing the window does not advance it. These are display-only
+flames: no extra simulation, particles or changes to replay recipes.
+
+![Pulsar with warm cells, ember trails and subtle rising flames](../img/fancy-pulsar.png)
+
+On the same Quadro P1000, a 20-second fullscreen run at 1920 × 1054 cells
+with fancy enabled reached **14.7 fps**, with **2.0% of one CPU core** for the
+program and Xorg combined (about 1.0% each). Seed 42, 15 fps target, 0.5-second
+warmup, Release/O3 build and the same asynchronous frame probe as the original
+GPU benchmarks. Startup is excluded, and Xorg includes other desktop activity.
+[Full run](../bench/fancy-render-2026-10-28.json).
+
+An offscreen Full HD draw comparison measured 0.50 ms classic / 0.89 ms fancy
+at one pixel per cell. At cell sizes 8, 32 and 128, fancy took 2.15, 3.90 and
+5.26 ms respectively. GPU clocks remained automatic, so these times include
+clock-state variation; they are not normalized shader throughput. Each size
+used 20 alternating classic/fancy pairs after four warmup pairs, 66.7 ms apart,
+on a fixed seed-42 world after 32 warmup generations. `GL_TIME_ELAPSED` covered
+only the fragment draw to an RGBA8 target, not simulation or presentation.
+These short measurements establish no electricity saving.
+[Draw measurements](../bench/fancy-draw-2026-10-28.json).
+
+To repeat the fullscreen run (it temporarily covers the desktop):
+
+```sh
+python3 bench/run.py --desktop --graphics-pids PID_XORG --engine gpu \
+  --style fancy --cases 1920x1080:1 --warmup 0.5 --phases 10,10 \
+  --seed 42 --output /tmp/life-fancy.json
+```
 
 The scene's initial state is generated on the CPU, including the 32-generation
 random warmup, so existing `life1` recipes and their checksums remain valid.

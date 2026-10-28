@@ -52,6 +52,16 @@ The automatic grid budget stays the same. --size 1 selects a finer world.
 .TP
 .B \-\-cpu
 Use the original CPU/Xlib engine. This is the default, also in GPU builds.
+Also disables the fancy style.
+.TP
+.B \-\-fancy
+Select the GPU engine and display warm embers and subtle rising flames.
+Combines with any scene, zoom or replay. Changes only the appearance, never
+the simulation or journal. Pauses when the wallpaper is covered.
+.TP
+.B \-\-classic
+Use the original palette without flames (default). Keeps the selected engine.
+Options apply left to right; --cpu disables fancy, --fancy selects GPU again.
 .TP
 .B \-\-square-cells
 Use sharp corners in the GPU renderer. By default, GPU cells have antialiased
