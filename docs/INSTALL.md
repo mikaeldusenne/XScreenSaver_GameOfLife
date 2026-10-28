@@ -196,6 +196,12 @@ Try `game-of-life screensaver` first. It uses the wallpaper plus a two-minute
 idle timeout. Quit the foreground command with Ctrl+C when finished trying it.
 Do not run two startup mechanisms for the same animation.
 
+This is the built-in interactive saver: the wallpaper pauses when fully hidden,
+rises above applications when idle, and returns behind them on any key. It
+supports next/previous clicks and scroll zoom, and does not lock the session.
+The separate [XScreenSaver integration](#xscreensaver) starts the animation only
+when idle and delegates input and optional locking to XScreenSaver.
+
 ### i3 and other minimal window managers
 
 Without systemd, add this to i3's config, replacing the home path:
@@ -204,23 +210,53 @@ Without systemd, add this to i3's config, replacing the home path:
 exec --no-startup-id /home/you/.local/bin/game_of_life --wallpaper --alternate --idle 120
 ```
 
-With a systemd user session and the default `~/.local` installation:
+With a systemd user session and the default `~/.local` installation, run from
+the repository:
 
 ```sh
 mkdir -p ~/.config/systemd/user
 cp contrib/game-of-life-wallpaper.service ~/.config/systemd/user/
+```
+
+The supplied service uses the CPU engine. To reproduce the development i3
+machine's GPU setup, first install the [GPU dependencies](GPU.md#requirements),
+rebuild with `./install.sh`, and check `~/.local/bin/game-of-life doctor --gpu`.
+Then replace `ExecStart` in `~/.config/systemd/user/game-of-life-wallpaper.service`
+with:
+
+```ini
+ExecStart=%h/.local/bin/game_of_life --wallpaper --alternate --idle 120 --gpu --random-size 1 --classic
+```
+
+This keeps the two-minute timeout, enables GPU calculation and rendering,
+and uses the classic mint/blue/gold palette. Use `--random-size 2` on a 4K
+display; `1` is suitable for Full HD. Single figures retain automatic framing.
+
+Enable the service from a terminal in your graphical session:
+
+```sh
 systemctl --user import-environment DISPLAY
-# If your session defines XAUTHORITY, import it too:
-systemctl --user import-environment XAUTHORITY
+if [ -n "${XAUTHORITY:-}" ]; then
+    systemctl --user import-environment XAUTHORITY
+fi
 systemctl --user daemon-reload
 systemctl --user enable --now game-of-life-wallpaper.service
 ```
 
-For i3 launched by `startx`, import the display environment in `.xinitrc`, and
-add `exec --no-startup-id systemctl --user restart game-of-life-wallpaper.service`
-to i3's config. This covers sessions that do not start `graphical-session.target`.
+For i3 launched by `startx`, put the display environment import commands above
+in `.xinitrc` before `exec i3`, and add this to i3's config:
+
+```text
+exec --no-startup-id systemctl --user restart game-of-life-wallpaper.service
+```
+
+This covers sessions that do not start `graphical-session.target`.
 The example service assumes `~/.local/bin`; edit `ExecStart` for another prefix.
 Do not use the native idle service in a Wayland session.
+
+If you edit a service that is already running, apply the changes with
+`systemctl --user daemon-reload`, then
+`systemctl --user restart game-of-life-wallpaper.service`.
 
 Stop: `systemctl --user stop game-of-life-wallpaper.service`. Disable: remove
 the i3 startup line and run `systemctl --user disable --now game-of-life-wallpaper.service`.

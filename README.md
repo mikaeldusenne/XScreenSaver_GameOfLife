@@ -55,6 +55,54 @@ No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-
 <tr><td><b>Pulsar</b> · watch a rhythm</td><td><b>Kok's galaxy</b> · watch a rotation</td></tr>
 </table>
 
+## Choose how the screensaver runs
+
+There are two ways to use it as a screensaver in an **X11 desktop session**:
+
+| | Built-in `screensaver` mode | XScreenSaver integration |
+| --- | --- | --- |
+| While you work | Animated wallpaper, paused when fully covered | Game of Life starts only when the saver activates |
+| Activation | After two idle minutes by default | Delay set in XScreenSaver |
+| Controls | Left/right click: next/previous; scroll: zoom; any key: return to work | XScreenSaver handles input and dismisses the animation |
+| Session locking | No password lock | Optional locking managed by XScreenSaver |
+
+**The built-in mode is the setup used on the development i3 machine.** It
+raises the wallpaper above applications after two idle minutes, including
+fullscreen windows. Returning to work leaves the wallpaper running behind them.
+XScreenSaver is a separate, optional integration.
+
+After installation, try the built-in mode with the default CPU engine:
+
+```sh
+~/.local/bin/game-of-life screensaver
+```
+
+To reproduce the development machine's **GPU, high-definition worlds and
+classic mint/blue/gold colors**, install the [GPU dependencies](docs/GPU.md#requirements)
+before running `./install.sh`, then:
+
+```sh
+~/.local/bin/game-of-life doctor --gpu
+~/.local/bin/game-of-life screensaver --gpu --random-size 1 --classic
+```
+
+This needs an OpenGL 4.3 driver. Use `--random-size 2` on a 4K display;
+`1` is suitable for Full HD. Single figures keep their automatic framing.
+GPU cells become rounded when enlarged, including with scroll zoom.
+Stop a foreground trial with Ctrl+C in its terminal before enabling autostart.
+
+For **automatic startup**, follow the [systemd and i3 instructions](docs/INSTALL.md#i3-and-other-minimal-window-managers).
+The supplied service uses the CPU by default. For the GPU setup above, replace
+its `ExecStart` line with:
+
+```ini
+ExecStart=%h/.local/bin/game_of_life --wallpaper --alternate --idle 120 --gpu --random-size 1 --classic
+```
+
+For an animation that runs only during inactivity, with optional locking,
+follow the [XScreenSaver setup](docs/INSTALL.md#xscreensaver).
+Both integrations require an X11 desktop; Xwayland is not sufficient.
+
 ## Thoughtful defaults
 
 - **Space to grow.** Single figures are centered with margins, with extra room

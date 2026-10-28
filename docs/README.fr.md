@@ -19,6 +19,42 @@ L’aperçu est accessible via XQuartz sur macOS et WSLg sur Windows ;
 les modes fond d’écran et inactivité demandent une session X11 complète.
 Le guide ci-dessous conserve aussi les commandes directes du moteur.
 
+## Choisir son économiseur d’écran
+
+Deux intégrations sont disponibles dans une **session de bureau X11** :
+
+| | Mode intégré `screensaver` | Intégration XScreenSaver |
+| --- | --- | --- |
+| Pendant le travail | Fond animé, en pause lorsqu’il est entièrement masqué | Game of Life démarre seulement à l’activation de l’économiseur |
+| Déclenchement | Après deux minutes d’inactivité par défaut | Délai réglé dans XScreenSaver |
+| Commandes | Clic gauche/droit : suivante/précédente ; molette : zoom ; une touche : retour au bureau | XScreenSaver gère les entrées et quitte l’animation |
+| Verrouillage | Aucun mot de passe | Verrouillage facultatif géré par XScreenSaver |
+
+**Le mode intégré est celui utilisé sur la machine de développement sous i3**,
+avec un démarrage automatique par un service systemd. L’animation passe devant
+les applications, même en plein écran, après deux minutes d’inactivité. Une
+touche ramène au bureau et laisse le fond animé actif derrière les fenêtres.
+
+Après installation, `~/.local/bin/game-of-life screensaver` lance ce mode avec
+le moteur CPU par défaut. Pour reproduire la configuration GPU, haute définition
+et couleurs classiques menthe/bleu/or, installer les [dépendances GPU](GPU.md#requirements)
+avant de lancer `./install.sh`, puis :
+
+```sh
+~/.local/bin/game-of-life doctor --gpu
+~/.local/bin/game-of-life screensaver --gpu --random-size 1 --classic
+```
+
+Il faut un pilote OpenGL 4.3. Utiliser `--random-size 2` sur un écran 4K ;
+`1` convient au Full HD. Les figures seules gardent leur cadrage automatique.
+Les cellules GPU deviennent arrondies en zoomant. Arrêter cet essai avec
+Ctrl+C dans son terminal avant d’activer le démarrage automatique.
+
+La section [Fond d’écran animé](#fond-décran-animé) détaille le service systemd
+et le démarrage sous i3. Pour une animation lancée uniquement pendant
+l’inactivité et un verrouillage facultatif, suivre [Utiliser dans XScreenSaver](#utiliser-dans-xscreensaver).
+Ces intégrations demandent X11 ; Xwayland ne suffit pas.
+
 ## Lancer
 
 Il faut un compilateur C, `make`, `pkg-config` et les en-têtes Xlib et Xss.
@@ -164,22 +200,45 @@ ne demande aucun mot de passe. Pour utiliser la gestion d’inactivité et de
 verrouillage de XScreenSaver, suivre plutôt la section suivante.
 L’extension utilisée est documentée dans le [manuel Xss de X.Org](https://xorg.freedesktop.org/releases/X11R6.9.0/doc/html/XScreenSaverQueryInfo.3.html).
 
-Pour une installation utilisateur persistante avec systemd :
+Pour une installation utilisateur persistante avec systemd, depuis le dépôt :
 
 ```sh
 mkdir -p ~/.config/systemd/user
 cp contrib/game-of-life-wallpaper.service ~/.config/systemd/user/
-systemctl --user import-environment DISPLAY XAUTHORITY
+```
+
+Le service fourni utilise le CPU par défaut. Pour reproduire la configuration
+GPU décrite plus haut, remplacer la ligne `ExecStart` du fichier
+`~/.config/systemd/user/game-of-life-wallpaper.service` par :
+
+```ini
+ExecStart=%h/.local/bin/game_of_life --wallpaper --alternate --idle 120 --gpu --random-size 1 --classic
+```
+
+Puis activer le service depuis un terminal de la session graphique :
+
+```sh
+systemctl --user import-environment DISPLAY
+if [ -n "${XAUTHORITY:-}" ]; then
+    systemctl --user import-environment XAUTHORITY
+fi
 systemctl --user daemon-reload
 systemctl --user enable --now game-of-life-wallpaper.service
 ```
 
-Avec i3 lancé depuis `.xinitrc`, ajouter aussi cette ligne à `~/.config/i3/config`
-après avoir importé `DISPLAY` et `XAUTHORITY` dans le service utilisateur :
+Avec i3 lancé depuis `.xinitrc`, placer aussi les commandes d’import de
+`DISPLAY` et de `XAUTHORITY` ci-dessus dans `.xinitrc`, avant `exec i3`, puis
+ajouter cette ligne à `~/.config/i3/config` :
 
 ```text
 exec --no-startup-id systemctl --user restart game-of-life-wallpaper.service
 ```
+
+Choisir un seul mécanisme de démarrage : avec ce service, ne pas ajouter en
+plus une commande directe `game-of-life screensaver` au démarrage d’i3.
+Si le service était déjà lancé lors d’une modification de `ExecStart`, exécuter
+`systemctl --user daemon-reload`, puis
+`systemctl --user restart game-of-life-wallpaper.service`.
 
 Pour arrêter : `systemctl --user stop game-of-life-wallpaper.service`.
 Pour retirer le démarrage automatique, supprimer cette ligne i3 et exécuter
