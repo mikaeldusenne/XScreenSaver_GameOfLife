@@ -7,7 +7,17 @@ case $0 in
 esac
 bindir=$(CDPATH= cd -- "$(dirname -- "$location")" && pwd)
 renderer=$bindir/game_of_life
-if [ ! -x "$renderer" ]; then
+case ${1:-} in
+    game|serve)
+        shift
+        if [ ! -x "$bindir/life-duel-server" ]; then
+            printf '%s\n' 'Install libwebsockets development files and run ./install.sh again. See docs/GAME.md.' >&2
+            exit 1
+        fi
+        exec "$bindir/life-duel-server" "$@"
+        ;;
+esac
+if [ ! -x "$renderer" ] && [ "${1:-}" != help ] && [ "${1:-}" != --help ] && [ "${1:-}" != -h ]; then
     printf '%s\n' "Cannot find $renderer. Reinstall Game of Life." >&2
     exit 1
 fi
@@ -38,6 +48,8 @@ Game of Life — cheap & beautiful
   game-of-life figure pulsar           One figure, room to grow
   game-of-life mix                     A garden of classic patterns
   game-of-life fancy                   Warm embers and subtle flames (GPU)
+  game-of-life game                    Start a two-player browser duel server
+  game-of-life game --bind 0.0.0.0     Let a friend join over the local network
   game-of-life figures gun             Find a figure by name or family
   game-of-life wallpaper               Animate behind X11 applications
   game-of-life screensaver             Wallpaper + saver after two idle minutes

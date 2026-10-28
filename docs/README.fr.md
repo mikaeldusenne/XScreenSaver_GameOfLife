@@ -19,6 +19,42 @@ L’aperçu est accessible via XQuartz sur macOS et WSLg sur Windows ;
 les modes fond d’écran et inactivité demandent une session X11 complète.
 Le guide ci-dessous conserve aussi les commandes directes du moteur.
 
+## Jouer à deux dans le navigateur
+
+**Life Duel** ajoute un mode jeu avec deux colonies, menthe et or. Chaque joueur
+prépare ses constructions ; les deux plans apparaissent ensemble, puis le monde
+avance de 16 générations. Les nouvelles cellules prennent la couleur majoritaire
+de leurs trois voisines. Le fond se teinte légèrement selon la population dominante.
+
+Tenir deux des trois zones centrales rapporte des points. Le premier à 160
+gagne ; après 30 manches, le meilleur score l’emporte. L’énergie permet de
+construire et l’expérience débloque un vaisseau puis un canon à gliders.
+Cellules, blocs, eaters et gliders sont disponibles dès le départ.
+
+Ajouter `libwebsockets` aux dépendances (`libwebsockets-dev` sur Debian/Ubuntu),
+puis :
+
+```sh
+./install.sh
+~/.local/bin/game-of-life game
+```
+
+Ouvrir **http://localhost:7681**, créer une partie et partager son invitation.
+Pour jouer avec un autre appareil du réseau local :
+
+```sh
+~/.local/bin/game-of-life game --bind 0.0.0.0
+```
+
+Les deux joueurs ouvrent alors `http://ADRESSE_IP_DU_SERVEUR:7681`. Le serveur C
+calcule et arbitre la partie ; les joueurs utilisent simplement leur navigateur,
+y compris sous Wayland, Windows ou macOS. Le serveur peut se compiler sans X11
+ni GPU. Une déconnexion laisse 30 secondes pour reprendre la partie. Les parties
+terminées se téléchargent et se rejouent depuis l’accueil.
+
+L’installation ne démarre aucun serveur automatiquement. Ctrl+C arrête un serveur
+lancé au premier plan. [Règles, installation et protocole](GAME.md).
+
 ## Choisir son économiseur d’écran
 
 Deux intégrations sont disponibles dans une **session de bureau X11** :

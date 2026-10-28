@@ -41,8 +41,16 @@ Does not append. Requires a compatible generator and figure library.
 .TP
 .B doctor
 Report the available display, fonts, wallpaper and idle capabilities.
+.TP
+.B game, serve
+Start the optional Life Duel HTTP/WebSocket server. Open http://localhost:7681
+in a browser, create a room and share its invitation. Requires libwebsockets
+at build time. Use --bind 0.0.0.0 for LAN access, --port N for another port,
+or --replay FILE to verify a recorded match. See docs/GAME.md and
+life-duel-server --help for server options. No X11 or GPU is needed by the server.
 .SH OPTIONS
-Options are passed to game_of_life and may follow a command.
+Renderer options are passed to game_of_life and may follow a command.
+The game and serve commands use separate server options.
 .TP
 .B \-\-gpu
 Compute and draw on OpenGL 4.3 through GLX. Requires a build with libepoxy.

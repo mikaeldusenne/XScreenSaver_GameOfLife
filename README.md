@@ -7,7 +7,7 @@
 Mint births, midnight-blue trails, golden colonies. A tiny C99 + Xlib program
 that turns Conway's Life into something worth leaving on your screen.
 
-[Install](docs/INSTALL.md) · [Explore](docs/USAGE.md) · [810 figures](FIGURES.md) · [Français](docs/README.fr.md)
+[Install](docs/INSTALL.md) · [Explore](docs/USAGE.md) · [Play a duel](docs/GAME.md) · [810 figures](FIGURES.md) · [Français](docs/README.fr.md)
 
 ![Game of Life running on a real X11 window](img/preview.png)
 
@@ -54,6 +54,28 @@ No per-frame disk writes. [History, replay and the format](docs/USAGE.md#keep-a-
 <tr><td><img src="img/figure-pulsar.png" alt="Pulsar, a symmetrical oscillator"></td><td><img src="img/figure-koks-galaxy.png" alt="Kok's galaxy"></td></tr>
 <tr><td><b>Pulsar</b> · watch a rhythm</td><td><b>Kok's galaxy</b> · watch a rotation</td></tr>
 </table>
+
+## Play together
+
+**Life Duel** turns the same figures into a two-player strategy game. Draft
+your constructions, commit together, and watch 16 generations unfold. Hold
+the central objectives to win; earn energy and unlock spaceships and glider guns.
+New cells inherit the majority color of their parents. The background subtly
+follows the balance between the mint and gold colonies.
+
+Install the optional `libwebsockets` development package, then:
+
+```sh
+./install.sh
+~/.local/bin/game-of-life game
+```
+
+Open **http://localhost:7681** and create a room. For another device on your LAN,
+start with `game-of-life game --bind 0.0.0.0`, open the host's LAN address and
+share the invitation link. The C server handles rules and synchronization;
+players only need a browser. No GPU or X11 is needed for the game server.
+Matches support reconnection and compact, downloadable replays.
+[Installation, rules and server details](docs/GAME.md).
 
 ## Choose how the screensaver runs
 

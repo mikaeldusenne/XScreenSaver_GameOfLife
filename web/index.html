@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Life Duel · Deux colonies, un monde</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="Life Duel, accueil"
+        ><span class="brand-mark" aria-hidden="true">⠪</span> LIFE
+        <span>DUEL</span></a
+      >
+      <div class="header-actions">
+        <span id="connection" class="connection">Hors partie</span
+        ><button id="rules-button" class="quiet">Comment jouer</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="lobby" class="lobby">
+        <div class="intro">
+          <p class="eyebrow">LE JEU DE LA VIE, À DEUX</p>
+          <h1>Faites grandir<br />votre <em>camp.</em></h1>
+          <p class="lede">
+            Construisez une colonie. Lancez vos gliders.<br />La prochaine
+            génération appartient à qui&nbsp;?
+          </p>
+          <div class="lobby-art" aria-hidden="true">
+            <canvas id="intro-canvas" width="440" height="150"></canvas>
+          </div>
+          <p class="small">
+            Deux joueurs · Des manches simultanées · Aucune inscription
+          </p>
+        </div>
+        <div class="lobby-card">
+          <span class="card-number">01 / PRENDRE PLACE</span>
+          <h2>Un monde à partager.</h2>
+          <p>Créez une partie, puis envoyez le lien à votre adversaire.</p>
+          <button id="create" class="primary">
+            Créer une partie <span>↗</span>
+          </button>
+          <div class="divider"><span>ou rejoindre un ami</span></div>
+          <form id="join-form">
+            <label for="room-code">Code de la partie</label>
+            <div class="join-row">
+              <input
+                id="room-code"
+                maxlength="8"
+                placeholder="A1B2C3D4"
+                autocomplete="off"
+                spellcheck="false"
+                pattern="[a-fA-F0-9]{8}"
+                required
+              /><button type="submit">Rejoindre</button>
+            </div>
+          </form>
+          <label class="replay-file"
+            >↺ Ouvrir une partie enregistrée<input
+              id="replay-file"
+              type="file"
+              accept=".duel,text/plain"
+          /></label>
+        </div>
+      </section>
+
+      <section id="match" hidden>
+        <div class="match-heading">
+          <div>
+            <p class="eyebrow" id="match-code">PARTIE</p>
+            <h1 id="phase-title">En attendant l’adversaire…</h1>
+          </div>
+          <div class="match-actions">
+            <button id="invite" class="quiet">Copier l’invitation ↗</button
+            ><button id="new-game" class="quiet">Nouvelle partie</button>
+          </div>
+        </div>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <div class="scoreboard">
+          <div class="colony mint">
+            <span class="colony-name">● Menthe <small id="you-0"></small></span
+            ><strong id="score-0">0</strong
+            ><span class="score-total">/ 160</span>
+            <div class="score-track"><i id="bar-0"></i></div>
+          </div>
+          <div class="zone-status">
+            <span class="small">ZONES CENTRALES</span>
+            <div id="zone-dots"><span>Ⅰ</span><span>Ⅱ</span><span>Ⅲ</span></div>
+          </div>
+          <div class="colony gold">
+            <span class="colony-name">● Or <small id="you-1"></small></span
+            ><strong id="score-1">0</strong
+            ><span class="score-total">/ 160</span>
+            <div class="score-track"><i id="bar-1"></i></div>
+          </div>
+        </div>
+        <div class="game-layout">
+          <div class="world-panel">
+            <div class="arena">
+              <canvas
+                id="board"
+                width="1280"
+                height="800"
+                tabindex="0"
+                aria-label="Arène du duel. Flèches pour déplacer la figure, Entrée pour la poser, R pour tourner, F pour refléter."
+              ></canvas>
+            </div>
+            <div class="world-footer">
+              <span id="world-stats">Génération 0</span
+              ><span id="world-hint">Construisez dans votre zone colorée.</span>
+            </div>
+            <div id="replay-controls" hidden>
+              <button id="replay-toggle">Pause</button
+              ><input
+                id="replay-position"
+                type="range"
+                min="0"
+                value="0"
+                aria-label="Génération de la relecture"
+              /><span id="replay-label"></span>
+            </div>
+          </div>
+          <aside class="toolbox" id="toolbox">
+            <div class="resource-row">
+              <div>
+                <span class="small">ÉNERGIE DISPONIBLE</span
+                ><strong id="energy">40 <small>/ 100</small></strong>
+              </div>
+              <div class="xp">
+                <span class="small">EXPÉRIENCE</span
+                ><strong id="xp">0 <small>XP</small></strong>
+              </div>
+            </div>
+            <p id="unlock-hint" class="small">Vaisseau à 3 XP · Canon à 8 XP</p>
+            <div
+              id="pieces"
+              class="pieces"
+              aria-label="Figures à construire"
+            ></div>
+            <div class="orientation">
+              <button id="rotate" title="R">↻ Tourner <kbd>R</kbd></button
+              ><button id="mirror" title="F">⇄ Reflet <kbd>F</kbd></button>
+            </div>
+            <p id="piece-description" class="piece-description"></p>
+            <div class="plan-row">
+              <span id="plan-count">Aucune construction</span
+              ><button id="undo" class="quiet" title="Ctrl+Z">Annuler ↶</button>
+            </div>
+            <button id="ready" class="primary ready">
+              Valider mes constructions <span>✓</span>
+            </button>
+            <div class="countdown"><i id="countdown-bar"></i></div>
+            <p id="round-info" class="small round-info">
+              20 secondes pour préparer votre manche.
+            </p>
+            <button id="download" hidden>Télécharger la partie ↧</button>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="rules">
+      <button id="close-rules" class="dialog-close" aria-label="Fermer">
+        ×
+      </button>
+      <p class="eyebrow">LES RÈGLES DU DUEL</p>
+      <h2>Construire. Observer. S’adapter.</h2>
+      <ol>
+        <li>
+          <strong>Préparez votre manche.</strong> Posez des cellules ou des
+          figures sur les cases vides de votre camp. Vos constructions restent
+          secrètes et peuvent être annulées jusqu’à votre validation.
+        </li>
+        <li>
+          <strong>Laissez la vie agir.</strong> Après les deux validations, ou à
+          la fin du compte à rebours, les deux plans apparaissent ensemble. Le
+          monde avance de 16 générations.
+        </li>
+        <li>
+          <strong>Prenez le centre.</strong> Dans chaque zone, il faut au moins
+          3 cellules et une majorité stricte pour la contrôler. Tenir deux zones
+          rapporte 1 point par génération. Le premier à 160 gagne. Après 30
+          manches, le meilleur score l’emporte ; à égalité, c’est un match nul.
+        </li>
+      </ol>
+      <p>
+        Chaque manche suivante apporte 16 d’énergie (réserve maximale : 100) et
+        1 XP, plus jusqu’à 2 XP pour les zones tenues en fin de manche. Le
+        modèle de vaisseau se débloque à 3 XP, le canon à 8 XP. Les modèles
+        coûtent moins cher que leur dessin cellule par cellule ; vous restez
+        libre de construire une forme à la main.
+      </p>
+      <p>
+        Une cellule naît avec 3 voisines et prend leur couleur majoritaire. Elle
+        survit avec 2 ou 3 voisines en gardant sa couleur. Les bords ne se
+        rejoignent pas. Les collisions peuvent aussi profiter à votre
+        adversaire.
+      </p>
+      <p class="small">
+        Clic : poser · R : tourner · F : reflet · Ctrl+Z : annuler · Espace :
+        valider. Une déconnexion suspend la partie pendant 30 secondes, puis
+        donne la victoire au joueur encore présent.
+      </p>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <footer class="site-footer">
+      LIFE DUEL <span>Des règles simples. Des conséquences vivantes.</span
+      ><span>Game of Life · 0.8</span>
+    </footer>
+  </body>
+</html>

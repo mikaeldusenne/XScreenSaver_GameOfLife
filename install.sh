@@ -14,6 +14,7 @@ Build and install Game of Life, its launcher, icon, manual and completion.
 Default destination: ~/.local. No sudo, no download, no session changes.
 Requires a C compiler, CMake, make or Ninja, and X11 development headers.
 Idle screensaver support also needs libXss (optional).
+The optional browser duel server needs libwebsockets development files.
 
 Uninstall using the same build directory: ./install.sh --uninstall
 For dependencies by platform, see docs/INSTALL.md.
@@ -50,6 +51,9 @@ cmake -S "$source_dir" -B "$build_dir" \
 cmake --build "$build_dir" --parallel 2
 cmake --install "$build_dir"
 printf '\nInstalled. Try:\n  "%s/bin/game-of-life"\n  "%s/bin/game-of-life" doctor\n' "$prefix" "$prefix"
+if [ -x "$prefix/bin/life-duel-server" ]; then
+    printf '  "%s/bin/game-of-life" game  # Two-player browser game\n' "$prefix"
+fi
 case :${PATH:-}: in
     *:"$prefix/bin":*) ;;
     *) printf '\nAdd "%s/bin" to PATH to use the shorter game-of-life command.\n' "$prefix" ;;

@@ -7,6 +7,11 @@ The default CPU engine needs no GPU API. The optional `--gpu` engine uses
 libepoxy and an OpenGL 4.3/GLX driver. No network service, downloaded pattern
 pack or Python runtime is needed. [GPU requirements and setup](GPU.md).
 
+The optional **Life Duel** server uses libwebsockets and serves a two-player
+browser game. It can be built without X11 or OpenGL. Add `libwebsockets` on Arch
+or `libwebsockets-dev` on Debian/Ubuntu before running `./install.sh`, then start
+`~/.local/bin/game-of-life game`. [Game installation and server-only builds](GAME.md).
+
 ## Where it runs
 
 | Session | Preview | Wallpaper + idle screensaver |
